@@ -5,6 +5,8 @@ import NewCareer from './features/NewCareer'
 import MatchWeek from './features/MatchWeek'
 import Squad from './features/Squad'
 import OtherTeams from './features/OtherTeams'
+import Market from './features/Market'
+import { MarketProvider } from './market/MarketContext'
 
 function SquadTab() {
   const { state } = useGameState()
@@ -71,7 +73,7 @@ function AppShell() {
           <Tabs current={tab} onChange={setTab} />
           {tab === 'squad' && <Squad />}
           {tab === 'teams' && <OtherTeams />}
-          {tab === 'market' && <div>Market view coming soon…</div>}
+          {tab === 'market' && <Market />}
           {tab === 'finance' && <div>Finance view coming soon…</div>}
           {tab === 'league' && <LeagueTab />}
           {tab === 'match' && <MatchWeek />}
@@ -83,7 +85,9 @@ function AppShell() {
 export default function App() {
   return (
     <GameStateProvider>
-      <AppShell />
+      <MarketProvider>
+        <AppShell />
+      </MarketProvider>
     </GameStateProvider>
   )
 }

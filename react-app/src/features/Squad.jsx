@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { useGameState } from '../state/GameStateContext'
 import { GAME_CONSTANTS } from '../constants'
 import fieldImg from '../../image/soccer.jpg'
+import { useMarket } from '../market/MarketContext'
 
 function roleSection(role) {
   if (role === 'GK') return 'GK'
@@ -34,6 +35,7 @@ function sectionAccent(sec) {
 
 export default function Squad() {
   const { state, setState, saveNow } = useGameState()
+  const market = useMarket()
   const team = state.teams.find(t => t.name === state.teamName)
   const [formation, setFormation] = useState(team?.tactics?.formation || '442')
   const [pressing, setPressing] = useState(team?.tactics?.pressing || 'medium')
@@ -249,6 +251,7 @@ export default function Squad() {
                           <th style={{ textAlign: 'left', padding: '4px 6px' }}>Name</th>
                           <th style={{ textAlign: 'left', padding: '4px 6px' }}>Role</th>
                           <th style={{ textAlign: 'left', padding: '4px 6px' }}>OVR</th>
+                          <th style={{ textAlign: 'left', padding: '4px 6px' }}>Action</th>
                           {headerSet.map(h => (
                             <th key={h.key} className="stat-col" style={{ textAlign: 'left', padding: '4px 6px' }} title={`${h.label}: ${h.tooltip}`}>{h.label}</th>
                           ))}
@@ -264,6 +267,13 @@ export default function Squad() {
                             <td style={{ textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '4px 6px' }}>#{p.number} {p.name}</td>
                             <td style={{ textAlign: 'left', padding: '4px 6px' }}>{(Array.isArray(p.roles) && p.roles.length ? p.roles : [p.primaryRole]).join('/')}</td>
                             <td style={{ textAlign: 'left', padding: '4px 6px' }} className="value" data-value={p.overall}>{p.overall}</td>
+                            <td style={{ textAlign: 'left', padding: '4px 6px' }}>
+                              {!team.finances?.playersForSale?.some(e => e.id === p.id) ? (
+                                <button onClick={() => market.listPlayer(p.id, p.value)}>List</button>
+                              ) : (
+                                <button onClick={() => market.unlistPlayer(p.id)}>Unlist</button>
+                              )}
+                            </td>
                             {headerSet.map(h => (
                               <td key={h.key} className="stat-col value" style={{ textAlign: 'left', padding: '4px 6px' }}>{p.stats[h.key] ?? p[h.key]}</td>
                             ))}

@@ -2,9 +2,11 @@ import React, { useState } from 'react'
 import { useGameState } from '../state/GameStateContext'
 import { simulateWeek } from '../engine/matchEngine'
 import { applyWeeklyFinances } from '../engine/financeEngine'
+import { useMarket } from '../market/MarketContext'
 
 export default function MatchWeek() {
   const { state, setState, saveNow } = useGameState()
+  const market = useMarket()
   const [lastSummary, setLastSummary] = useState(null)
   const weekIndex = state.league.week - 1
   const fixtures = state.league.fixtures[weekIndex] || []
@@ -13,6 +15,8 @@ export default function MatchWeek() {
     const { nextState, weekResults } = simulateWeek(state)
     const { nextState: withFinances, breakdowns } = applyWeeklyFinances(nextState, weekResults)
     setState(withFinances)
+    // Process simple weekly market logic
+    market.processWeeklyMarket()
     const myName = state.teamName
     if (breakdowns && breakdowns[myName]) {
       const b = breakdowns[myName]
