@@ -254,11 +254,12 @@ export default function Squad() {
                     <th style={{ textAlign: 'left' }}>Name</th>
                     <th style={{ textAlign: 'left' }}>Role</th>
                     <th style={{ textAlign: 'left' }}>OVR</th>
-                    <th style={{ textAlign: 'left' }}>PAS</th>
-                    <th style={{ textAlign: 'left' }}>SHO</th>
-                    <th style={{ textAlign: 'left' }}>DEF</th>
-                    <th style={{ textAlign: 'left' }}>DRI</th>
-                    <th style={{ textAlign: 'left' }}>TAC</th>
+                    {(() => {
+                      const headerSet = sec === 'GK' ? GAME_CONSTANTS.UI.HEADERS.GK.stats : GAME_CONSTANTS.UI.HEADERS.OUTFIELD.stats
+                      return headerSet.map((h) => (
+                        <th key={h.key} style={{ textAlign: 'left' }} title={`${h.label}: ${h.tooltip}`}>{h.label}</th>
+                      ))
+                    })()}
                   </tr>
                 </thead>
                 <tbody>
@@ -271,11 +272,12 @@ export default function Squad() {
                       <td style={{ textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{p.number} {p.name}</td>
                       <td style={{ textAlign: 'left' }}>{p.primaryRole}</td>
                       <td style={{ textAlign: 'left' }} className="value" data-value={p.overall}>{p.overall}</td>
-                      <td style={{ textAlign: 'left' }} className="value">{p.stats.pass}</td>
-                      <td style={{ textAlign: 'left' }} className="value">{p.stats.shot}</td>
-                      <td style={{ textAlign: 'left' }} className="value">{p.stats.def}</td>
-                      <td style={{ textAlign: 'left' }} className="value">{p.stats.drib}</td>
-                      <td style={{ textAlign: 'left' }} className="value">{p.stats.tackle}</td>
+                      {(() => {
+                        const headerSet = sec === 'GK' ? GAME_CONSTANTS.UI.HEADERS.GK.stats : GAME_CONSTANTS.UI.HEADERS.OUTFIELD.stats
+                        return headerSet.map((h) => (
+                          <td key={h.key} style={{ textAlign: 'left' }} className="value">{p.stats[h.key] ?? p[h.key]}</td>
+                        ))
+                      })()}
                     </tr>
                   ))}
                 </tbody>
