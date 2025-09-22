@@ -270,8 +270,8 @@ export default function Squad() {
                         if (id) {
                           const pl = players.find(pp => String(pp.id) === String(id))
                           const natural = positions[sec][idx]?.natural || []
-                          // Allow any player within section; natural only used for OOP highlight
-                          valid = !!pl && pl.section === sec
+                          // Strict: require section and natural position match
+                          valid = !!pl && pl.section === sec && natural.includes(pl.primaryRole)
                         }
                         setHover({ sec, idx, valid })
                       }}

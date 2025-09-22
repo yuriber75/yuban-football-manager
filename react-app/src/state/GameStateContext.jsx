@@ -61,6 +61,41 @@ function hydrate(raw) {
   parsed.negotiations.rejectedPlayers = new Set(parsed.negotiations.rejectedPlayers || [])
   parsed.negotiations.attemptsCount = parsed.negotiations.attemptsCount || {}
 
+  function roleSection(role) {
+    if (role === 'GK') return 'GK'
+    if (['DR','DC','DL'].includes(role)) return 'DF'
+    if (['MR','MC','ML'].includes(role)) return 'MF'
+    if (['FR','ST','FL'].includes(role)) return 'FW'
+    return 'MF'
+  }
+
+  function ensureJerseyNumbers(players) {
+    const POOLS = {
+      GK: [1, 12, 13, 22, 23, 31],
+      DF: [2, 3, 4, 5, 6, 15, 16, 20, 21, 24, 25],
+      MF: [6, 7, 8, 10, 11, 14, 17, 18, 19, 26],
+      FW: [9, 10, 17, 18, 19, 27, 28],
+    }
+    const used = new Set(players.filter(p => typeof p.number === 'number').map(p => p.number))
+    let fallback = 30
+    for (const p of players) {
+      if (typeof p.number === 'number') continue
+      const sec = roleSection(p.primaryRole)
+      const pool = POOLS[sec] || []
+      let assigned = null
+      for (const n of pool) {
+        if (!used.has(n)) { assigned = n; break }
+      }
+      if (assigned == null) {
+        while (used.has(fallback)) fallback++
+        assigned = fallback
+        fallback++
+      }
+      p.number = assigned
+      used.add(assigned)
+    }
+  }
+
   if (Array.isArray(parsed.teams)) {
     parsed.teams = parsed.teams.map((team) => ({
       ...team,
@@ -73,6 +108,11 @@ function hydrate(raw) {
       },
       tactics: team.tactics || { formation: team.formation || '442' },
     }))
+
+    // Ensure jersey numbers exist/unique per team
+    parsed.teams.forEach(t => {
+      if (Array.isArray(t.players)) ensureJerseyNumbers(t.players)
+    })
   }
 
   return parsed
