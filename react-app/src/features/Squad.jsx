@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { useGameState } from '../state/GameStateContext'
 import { GAME_CONSTANTS } from '../constants'
+import fieldImg from '../../image/soccer.jpg'
 
 function roleSection(role) {
   if (role === 'GK') return 'GK'
@@ -20,10 +21,13 @@ export default function Squad() {
   const team = state.teams.find(t => t.name === state.teamName)
   const [formation, setFormation] = useState(team?.tactics?.formation || '442')
   const [hover, setHover] = useState(null) // { sec, idx, valid }
+  const [message, setMessage] = useState(null) // transient error/info
+  const [flash, setFlash] = useState(null) // { type: 'slot'|'bench', sec?, idx }
 
   const players = useMemo(() => (team?.players || []).map(p => ({ ...p, section: roleSection(p.primaryRole) })), [team])
   const starters = players.filter(p => p.starting || p.slot)
-  const bench = players.filter(p => !p.starting && !p.slot)
+  const bench = players.filter(p => p.benchIndex !== undefined).sort((a,b)=> a.benchIndex - b.benchIndex)
+  const available = players.filter(p => !p.slot && p.benchIndex === undefined)
   const positions = GAME_CONSTANTS.POSITION_ROLES[formation]
 
   if (!team) return <div className="card">No team found. Start a career.</div>
@@ -153,7 +157,7 @@ export default function Squad() {
 
       <div className="row2" style={{ marginTop: 12 }}>
         {/* Left: roster grouped by roles */}
-        <div className="table-container">
+        <div className="table-container" style={{ flex: '1 1 25%' }}>
           <h3>Roster</h3>
           {['GK','DF','MF','FW'].map(sec => (
             <div key={sec} className="table-container" style={{ marginTop: 8 }}>
@@ -166,8 +170,8 @@ export default function Squad() {
                 </thead>
                 <tbody>
                   {players.filter(p => p.section === sec).map(p => (
-                    <tr key={p.id} draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', p.id) }} title="Trascina sul campo per schierare">
-                      <td>{p.name}{p.slot ? ' • XI' : ''}</td>
+                    <tr key={p.id} draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', p.id) }} title="Drag to field or bench">
+                      <td>{p.name}{p.slot ? ' • XI' : (p.benchIndex !== undefined ? ' • Bench' : '')}</td>
                       <td>{p.primaryRole}</td>
                       <td className="value" data-value={p.overall}>{p.overall}</td>
                       <td className="value">{p.stats.pass}</td>
@@ -183,14 +187,14 @@ export default function Squad() {
           ))}
         </div>
 
-        {/* Right: field with DnD positions */}
-        <div className="table-container">
-          <h3>Starting XI — trascina i giocatori qui</h3>
+        {/* Middle: field with DnD positions */}
+        <div className="table-container" style={{ flex: '1 1 50%' }}>
+          <h3>Starting XI — drag players here</h3>
           <div style={{
             position: 'relative',
             width: '100%',
             paddingTop: '150%', // aspect ratio field
-            background: `url('/image/soccer.jpg') center/cover no-repeat`,
+            background: `url(${fieldImg}) center/cover no-repeat`,
             borderRadius: 12,
             border: '1px solid var(--border)'
           }}>
@@ -212,7 +216,8 @@ export default function Squad() {
                         if (id) {
                           const pl = players.find(pp => String(pp.id) === String(id))
                           const natural = positions[sec][idx]?.natural || []
-                          valid = !!pl && pl.section === sec && natural.includes(pl.primaryRole)
+                          // Allow any player within section; natural only used for OOP highlight
+                          valid = !!pl && pl.section === sec
                         }
                         setHover({ sec, idx, valid })
                       }}
@@ -232,17 +237,19 @@ export default function Squad() {
                         textAlign: 'center',
                         background: occupant ? 'rgba(34,197,94,0.2)' : 'rgba(0,0,0,0.35)',
                         borderStyle: occupant ? 'solid' : 'dashed',
-                        borderColor: hover && hover.sec === sec && hover.idx === idx ? (hover.valid ? 'var(--border)' : '#dc2626') : 'var(--border)'
+                        borderColor: (flash && flash.type==='slot' && flash.sec===sec && flash.idx===idx) ? '#dc2626' : (
+                          occupant && occupant.slot?.oop ? '#f59e0b' : (hover && hover.sec === sec && hover.idx === idx ? (hover.valid ? 'var(--border)' : '#dc2626') : 'var(--border)')
+                        )
                       }}
                     >
                       {occupant ? (
                         <div draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', occupant.id) }}>
                           <div style={{ fontWeight: 700 }}>{occupant.name}</div>
-                          <div style={{ fontSize: 12, opacity: 0.9 }}>{occupant.primaryRole} · OVR {occupant.overall}</div>
-                          <button className="btn-warn" style={{ marginTop: 6, width: 'auto' }} onClick={()=>clearSlot(sec, idx)}>Rimuovi</button>
+                          <div style={{ fontSize: 12, opacity: 0.9 }}>{occupant.primaryRole} · OVR {occupant.overall}{occupant.slot?.oop ? ' • Out of position' : ''}</div>
+                          <button className="btn-warn" style={{ marginTop: 6, width: 'auto' }} onClick={()=>clearSlot(sec, idx)}>Remove</button>
                         </div>
                       ) : (
-                        <div style={{ color: 'var(--muted)' }}>Trascina qui ({sec})</div>
+                        <div style={{ color: 'var(--muted)' }}>Drag here ({sec})</div>
                       )}
                     </div>
                   </div>
@@ -250,7 +257,35 @@ export default function Squad() {
               })
             ))}
           </div>
-          <p style={{ color: 'var(--muted)', marginTop: 8 }}>Suggerimento: trascina un giocatore del roster sullo slot desiderato per assegnarlo. Puoi trascinare uno schierato su un altro slot per riposizionarlo.</p>
+          <p style={{ color: 'var(--muted)', marginTop: 8 }}>Tip: drag a player from the roster to a slot to assign. Drag a placed player to another slot to reposition.</p>
+          {message && <div className="card" style={{ borderColor: '#dc2626' }}>{message}</div>}
+        </div>
+
+        {/* Right: bench (7 slots) */}
+        <div className="table-container" style={{ flex: '1 1 25%' }}>
+          <h3>Bench (7)</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
+            {Array.from({ length: 7 }).map((_, i) => {
+              const bOcc = bench.find(p => p.benchIndex === i)
+              return (
+                <div key={i}
+                     className="card"
+                     onDragOver={(e)=> e.preventDefault()}
+                     onDrop={(e)=>{ const id = e.dataTransfer.getData('text/plain'); if (id) assignToBench(id, i) }}
+                     style={{ padding: 8, minHeight: 60, background: bOcc ? 'rgba(147,197,253,0.15)' : 'rgba(0,0,0,0.25)', borderColor: (flash && flash.type==='bench' && flash.idx===i) ? '#dc2626' : 'var(--border)' }}>
+                  {bOcc ? (
+                    <div draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', bOcc.id) }}>
+                      <div style={{ fontWeight: 700 }}>{bOcc.name}</div>
+                      <div style={{ fontSize: 12, opacity: 0.9 }}>{bOcc.primaryRole} · OVR {bOcc.overall}</div>
+                      <button className="btn-warn" style={{ marginTop: 6, width: 'auto' }} onClick={()=>clearBench(i)}>Remove</button>
+                    </div>
+                  ) : (
+                    <div style={{ color: 'var(--muted)' }}>Drag here (Bench)</div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>
