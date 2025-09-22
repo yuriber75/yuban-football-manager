@@ -48,6 +48,17 @@ export default function Squad() {
 
   if (!team) return <div className="card">No team found. Start a career.</div>
 
+  // When a line has 5 players (e.g., MF in 3-5-2 or 4-5-1, DF in 5-4-1), widen spacing and push extremes outward
+  function adjustedXForFive(sec, idx, x) {
+    const len = positions?.[sec]?.length || 0
+    if (len === 5) {
+      const offsets = [-8, -3, 0, 3, 8] // widen extremes (-8/+8) and increase spacing (-3/+3) for inner ones
+      const nx = x + (offsets[idx] || 0)
+      return Math.max(5, Math.min(95, nx))
+    }
+    return x
+  }
+
   function updateTeam(nextPlayers, nextFormation = formation) {
     const nextTeams = state.teams.map(t => t.name === team.name ? { ...t, players: nextPlayers, tactics: { ...(t.tactics||{}), formation: nextFormation } } : t)
     setState({ ...state, teams: nextTeams })
@@ -308,8 +319,9 @@ export default function Squad() {
                 }
                 const slotWidth = 100
                 const slotHeight = Math.round(slotWidth * 1.5)
+                const adjX = adjustedXForFive(sec, idx, pos.x)
                 return (
-                  <div key={slotKey} style={{ position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)', width: slotWidth }}>
+                  <div key={slotKey} style={{ position: 'absolute', left: `${adjX}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)', width: slotWidth }}>
                     <div
                       onDragEnter={(e)=>{
                         const id = e.dataTransfer.getData('text/plain')
