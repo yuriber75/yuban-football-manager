@@ -63,11 +63,11 @@ export default function Squad() {
   }
 
   function clearStarters() {
-    updateTeam(players.map(p => ({ ...p, starting: false, slot: undefined, benchIndex: undefined })))
+    updateTeam(players.map(p => ({ ...p, starting: false, slot: undefined })))
   }
 
   function autoPick() {
-    const next = players.map(p => ({ ...p, starting: false, slot: undefined, benchIndex: undefined }))
+    const next = players.map(p => ({ ...p, starting: false, slot: undefined }))
     // helper: pick best by section and assign sequentially to slots
     const pickForSection = (sec) => {
       const slots = positions[sec]
@@ -82,20 +82,6 @@ export default function Squad() {
     pickForSection('DF')
     pickForSection('MF')
     pickForSection('FW')
-    // Fill bench (7 slots): best remaining players, allow only 1 GK on bench
-    const remaining = next.filter(p => !p.starting && !p.slot)
-                          .sort((a,b)=> b.overall - a.overall)
-    let benchCount = 0
-    let gkOnBench = 0
-    for (const p of remaining) {
-      if (benchCount >= 7) break
-      if (p.primaryRole === 'GK') {
-        if (gkOnBench >= 1) continue
-        gkOnBench++
-      }
-      p.benchIndex = benchCount
-      benchCount++
-    }
     updateTeam(next)
   }
 
@@ -235,9 +221,9 @@ export default function Squad() {
 
   return (
     <div className="card">
-  <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'nowrap', alignItems: 'flex-start' }}>
+  <div className="squad-layout" style={{ display: 'flex', gap: 12, marginTop: 12, alignItems: 'flex-start' }}>
         {/* Left: roster grouped by roles */}
-  <div className="table-container" style={{ flex: '0 0 50%', minWidth: 0 }}>
+  <div className="table-container col-roster" style={{ flex: '0 0 50%', minWidth: 0 }}>
           <h3>Roster</h3>
           {['GK','DF','MF','FW'].map(sec => (
             <div key={sec} className="table-container" style={{ marginTop: 4 }}>
@@ -248,14 +234,14 @@ export default function Squad() {
                 const headerSet = sec === 'GK' ? GAME_CONSTANTS.UI.HEADERS.GK.stats : GAME_CONSTANTS.UI.HEADERS.OUTFIELD.stats
                 const tableMinWidth = 220 + 70 + 56 + (56 * headerSet.length) // Name + Role + OVR + stats
                 return (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ minWidth: tableMinWidth, borderSpacing: 0 }}>
+                  <div className="roster-wrap">
+                    <table className="roster-table" style={{ borderSpacing: 0 }}>
                       <colgroup>
-                        <col style={{ width: 220 }} />
-                        <col style={{ width: 70 }} />
-                        <col style={{ width: 56 }} />
+                        <col className="col-name" style={{ width: 220 }} />
+                        <col className="col-role" style={{ width: 70 }} />
+                        <col className="col-ovr" style={{ width: 56 }} />
                         {headerSet.map(h => (
-                          <col key={`col-${h.key}`} style={{ width: 56 }} />
+                          <col key={`col-${h.key}`} className="stat-col" style={{ width: 56 }} />
                         ))}
                       </colgroup>
                       <thead>
@@ -264,7 +250,7 @@ export default function Squad() {
                           <th style={{ textAlign: 'left', padding: '4px 6px' }}>Role</th>
                           <th style={{ textAlign: 'left', padding: '4px 6px' }}>OVR</th>
                           {headerSet.map(h => (
-                            <th key={h.key} style={{ textAlign: 'left', padding: '4px 6px' }} title={`${h.label}: ${h.tooltip}`}>{h.label}</th>
+                            <th key={h.key} className="stat-col" style={{ textAlign: 'left', padding: '4px 6px' }} title={`${h.label}: ${h.tooltip}`}>{h.label}</th>
                           ))}
                         </tr>
                       </thead>
@@ -274,12 +260,12 @@ export default function Squad() {
                               draggable
                               onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', p.id) }}
                               title="Drag to field or bench"
-                              style={{ background: p.slot ? 'rgba(34,197,94,0.10)' : (p.benchIndex !== undefined ? 'rgba(250,204,21,0.22)' : undefined) }}>
+                              style={{ background: p.slot ? 'rgba(34,197,94,0.10)' : (p.benchIndex !== undefined ? 'rgba(0,0,0,0.06)' : undefined) }}>
                             <td style={{ textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '4px 6px' }}>#{p.number} {p.name}</td>
                             <td style={{ textAlign: 'left', padding: '4px 6px' }}>{(Array.isArray(p.roles) && p.roles.length ? p.roles : [p.primaryRole]).join('/')}</td>
                             <td style={{ textAlign: 'left', padding: '4px 6px' }} className="value" data-value={p.overall}>{p.overall}</td>
                             {headerSet.map(h => (
-                              <td key={h.key} style={{ textAlign: 'left', padding: '4px 6px' }} className="value">{p.stats[h.key] ?? p[h.key]}</td>
+                              <td key={h.key} className="stat-col value" style={{ textAlign: 'left', padding: '4px 6px' }}>{p.stats[h.key] ?? p[h.key]}</td>
                             ))}
                           </tr>
                         ))}
@@ -293,31 +279,31 @@ export default function Squad() {
         </div>
 
         {/* Middle: field with DnD positions */}
-        <div className="table-container" style={{ flex: '0 0 40%', minWidth: 0 }}>
-          <div className="row2" style={{ alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 12, flexWrap: 'nowrap', overflowX: 'auto' }}>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'nowrap', alignItems: 'center' }}>
-              <label style={{ marginRight: 6, whiteSpace: 'nowrap' }}>Formation</label>
-              <select className="control-select" value={formation} onChange={onChangeFormation}>
+  <div className="table-container col-field" style={{ flex: '0 0 40%', minWidth: 0 }}>
+          <div className="row2" style={{ alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <label style={{ marginRight: 6 }}>Formation</label>
+              <select value={formation} onChange={onChangeFormation}>
                 {Object.keys(GAME_CONSTANTS.FORMATIONS).map(f => (
                   <option key={f} value={f}>{f.slice(0,1)}-{f.slice(1,2)}-{f.slice(2)}</option>
                 ))}
               </select>
-              <label style={{ marginLeft: 8, whiteSpace: 'nowrap' }}>Pressing</label>
-              <select className="control-select" value={pressing} onChange={(e)=>{ setPressing(e.target.value); updateTactics({ pressing: e.target.value }) }}>
+              <label style={{ marginLeft: 8 }}>Pressing</label>
+              <select value={pressing} onChange={(e)=>{ setPressing(e.target.value); updateTactics({ pressing: e.target.value }) }}>
                 <option value="high">High</option>
                 <option value="medium">Medium</option>
                 <option value="low">Low</option>
               </select>
-              <label style={{ marginLeft: 8, whiteSpace: 'nowrap' }}>Verticality</label>
-              <select className="control-select" value={verticalization} onChange={(e)=>{ setVerticalization(e.target.value); updateTactics({ verticalization: e.target.value }) }}>
-                <option value="long_balls">Long balls</option>
-                <option value="horizontal">Horizontal passes</option>
-                <option value="neutral">Neutral</option>
+              <label style={{ marginLeft: 8 }}>Verticalizzazione</label>
+              <select value={verticalization} onChange={(e)=>{ setVerticalization(e.target.value); updateTactics({ verticalization: e.target.value }) }}>
+                <option value="long_balls">Lanci lunghi</option>
+                <option value="horizontal">Passaggi orizzontali</option>
+                <option value="neutral">Neutrale</option>
               </select>
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
-              <button className="btn-secondary" onClick={autoPick} style={{ width: 'auto' }}>Auto-pick</button>
-              <button className="btn-warn" onClick={clearStarters} style={{ width: 'auto' }}>Clear</button>
+              <button className="btn-secondary" onClick={autoPick} style={{ width: 'auto' }}>Auto-pick XI</button>
+              <button className="btn-warn" onClick={clearStarters} style={{ width: 'auto' }}>Clear XI</button>
             </div>
           </div>
           <h3>Starting XI — drag players here</h3>
@@ -441,7 +427,7 @@ export default function Squad() {
         </div>
 
         {/* Right: bench (7 slots) */}
-  <div className="table-container" style={{ flex: '0 0 10%', minWidth: 0 }}>
+  <div className="table-container col-bench" style={{ flex: '0 0 10%', minWidth: 0 }}>
           <h3>Bench (7)</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
             {Array.from({ length: 7 }).map((_, i) => {

@@ -11,3 +11,18 @@ body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial
 	padding: 16px;
 }
 .app-title { text-align: center; margin: 0 0 8px; }
+
+/* Roster table responsive behavior */
+.roster-wrap { overflow-x: hidden; }
+.roster-table { width: 100%; }
+@media (max-width: 900px) {
+	/* Hide stat columns to avoid horizontal scroll on narrow screens */
+	.roster-table .stat-col { display: none; }
+	.roster-wrap { overflow-x: visible; }
+}
+
+/* Stack the three columns on very small widths */
+@media (max-width: 900px) {
+	.squad-layout { flex-direction: column; }
+	.col-roster, .col-field, .col-bench { flex: 0 0 auto !important; width: 100% !important; }
+}
