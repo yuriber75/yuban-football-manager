@@ -1,7 +1,7 @@
 import React from 'react'
 
 const tabs = [
-  { id: 'squad', label: 'Squad' },
+  { id: 'squad', label: 'My Team' },
   { id: 'market', label: 'Market' },
   { id: 'finance', label: 'Finance' },
   { id: 'league', label: 'League' },

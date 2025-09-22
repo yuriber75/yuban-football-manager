@@ -19,7 +19,7 @@ function pickRolesForFormation(formation = '442') {
 
 export function makeTeam(name, formation = '442') {
   const starterRoles = pickRolesForFormation(formation)
-  const starters = starterRoles.map((r, idx) => ({ ...makePlayer(r), starting: true }))
+  const starters = starterRoles.map((r, idx) => ({ ...makePlayer(r), starting: false }))
 
   // bench/depth up to at least MIN_SQUAD_SIZE
   const squad = [...starters]

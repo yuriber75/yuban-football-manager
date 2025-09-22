@@ -29,3 +29,8 @@ Next steps:
 ## 2025-09-22 (cont. 3)
 - New Career UX: removed formation selection (defaults to 4-4-2) and aligned styling with legacy classes (`card`, `btn-primary`).
 - Integrated legacy CSS by importing `css/styles.css` into React entry; updated Tabs to use `.tab` styling.
+
+## 2025-09-22 (cont. 4)
+- Squad tab reworked to "My Team": new `features/Squad.jsx` allows formation selection, manual starting XI toggles, auto-pick XI and clear.
+- Team generation no longer auto-sets starters; all players start as bench to allow manual selection similar to vanilla.
+- Added safe constants fallbacks (names/stats) to ensure reliable seeding.

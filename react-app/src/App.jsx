@@ -3,6 +3,7 @@ import { GameStateProvider, useGameState } from './state/GameStateContext'
 import { Tabs } from './components/Tabs'
 import NewCareer from './features/NewCareer'
 import MatchWeek from './features/MatchWeek'
+import Squad from './features/Squad'
 
 function SquadTab() {
   const { state } = useGameState()
@@ -61,7 +62,7 @@ function AppShell() {
         <NewCareer />
       ) : (
         <>
-          {tab === 'squad' && <SquadTab />}
+          {tab === 'squad' && <Squad />}
           {tab === 'market' && <div>Market view coming soon…</div>}
           {tab === 'finance' && <div>Finance view coming soon…</div>}
           {tab === 'league' && <LeagueTab />}
