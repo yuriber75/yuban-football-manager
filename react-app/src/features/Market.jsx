@@ -3,6 +3,7 @@ import { useGameState } from '../state/GameStateContext'
 import { useMarket } from '../market/MarketContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { formatMillions } from '../utils/formatters'
+import { GAME_CONSTANTS } from '../constants'
 
 function Section({ title, children }) {
   return (
