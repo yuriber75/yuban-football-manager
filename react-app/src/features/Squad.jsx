@@ -269,7 +269,7 @@ export default function Squad() {
                         title="Drag to field or bench"
                         style={{ background: p.slot ? 'rgba(34,197,94,0.10)' : (p.benchIndex !== undefined ? 'rgba(239,68,68,0.08)' : undefined) }}>
                       <td style={{ textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{p.number} {p.name}</td>
-                      <td style={{ textAlign: 'left' }}>{p.primaryRole}</td>
+                      <td style={{ textAlign: 'left' }}>{(Array.isArray(p.roles) && p.roles.length ? p.roles : [p.primaryRole]).join('/')}</td>
                       <td style={{ textAlign: 'left' }} className="value" data-value={p.overall}>{p.overall}</td>
                       {(() => {
                         const headerSet = sec === 'GK' ? GAME_CONSTANTS.UI.HEADERS.GK.stats : GAME_CONSTANTS.UI.HEADERS.OUTFIELD.stats
