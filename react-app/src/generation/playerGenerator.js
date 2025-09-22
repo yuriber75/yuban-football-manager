@@ -25,6 +25,20 @@ function sampleTargetOverall() {
   return randomBetween(55, 64)
 }
 
+// Apply a smooth age-based adjustment: slight penalty after 30, slight boost at 23–27
+function adjustOverallForAge(target, age) {
+  // Base curve: peak ~25, small dip after 30
+  let delta = 0
+  if (age >= 31 && age <= 33) delta = -2
+  else if (age >= 34 && age <= 36) delta = -4
+  else if (age <= 21) delta = -2
+  else if (age >= 22 && age <= 24) delta = +1
+  else if (age >= 25 && age <= 27) delta = +2
+  else if (age >= 28 && age <= 30) delta = 0
+  const adjusted = clamp(target + delta, 55, 95)
+  return adjusted
+}
+
 export function makePlayer(primaryRole = 'MC') {
   // Use vanilla-like GK styles for goalkeepers; otherwise use role base stats
   let posBase
@@ -56,7 +70,9 @@ export function makePlayer(primaryRole = 'MC') {
   }
 
   // Aim overall to follow the requested distribution
-  const targetOverall = sampleTargetOverall()
+  let targetOverall = sampleTargetOverall()
+  // age-aware tweak
+  targetOverall = adjustOverallForAge(targetOverall, age)
   let overall = weightedAverage(stats, posWeights)
   if (overall !== targetOverall) {
     // Scale stats toward target overall; then fine-tune on high-weight attributes
