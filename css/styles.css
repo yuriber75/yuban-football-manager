@@ -1,0 +1,1148 @@
+/*********************************************
+ * 1. ROOT VARIABLES AND BASE STYLES
+ *********************************************/
+:root {
+    --bg: #0e1117;
+    --panel: #161b22;
+    --muted: #94a3b8;
+    --text: #e5e7eb;
+    --accent: #22c55e;
+    --accent2: #60a5fa;
+    --danger: #ef4444;
+    --warn: #f59e0b;
+    --border: #222;
+}
+
+/* Base Elements */
+* { 
+    box-sizing: border-box 
+}
+
+body {
+    margin: 0;
+    font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto;
+    background: var(--bg);
+    color: var(--text);
+}
+
+h1 {
+    margin: 0;
+    font-size: 18px;
+}
+
+/*********************************************
+ * 1.1 TABLES
+ *********************************************/
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--panel);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+th, td {
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+}
+
+th {
+    background: var(--panel);
+    font-weight: 600;
+    color: var(--text);
+}
+
+tr:hover {
+    background: rgba(31, 41, 55, 0.5);
+}
+
+td[data-value],
+.value {
+    font-family: monospace;
+    text-align: right;
+}
+
+/* Status comuni */
+.status-indicator {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+    min-width: 80px;
+}
+
+.market-status,
+.offer-status,
+.listed-status {
+    @extend .status-indicator;
+}
+
+.market-status.listed {
+    background: var(--warn);
+    color: #000;
+}
+
+.market-status.not-listed {
+    background: var(--muted);
+    color: var(--text);
+}
+
+.offer-status {
+    background: var(--accent2);
+    color: white;
+}
+
+/* Card container per le tabelle */
+.table-container {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.table-container h3 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    color: var(--text);
+}
+
+/* Stili per i pulsanti nelle tabelle */
+.table-action-button {
+    padding: 4px 8px;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: auto;
+    min-width: 80px;
+}
+
+.btn-market {
+    @extend .table-action-button;
+    background: var(--accent);
+    color: white;
+}
+
+.btn-market:hover:not(:disabled) {
+    background: #1a9550;
+    transform: translateY(-1px);
+}
+
+.btn-market:disabled {
+    background: var(--muted);
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Stili per i valori positivi/negativi */
+.positive {
+    color: var(--accent);
+	font-size: 14px;
+}
+
+.negative {
+    color: var(--danger);
+	font-size: 14px;
+}
+
+/*********************************************
+ * 2. LAYOUT AND GRID
+ *********************************************/
+header {
+    position: sticky;
+    top: 0;
+    background: linear-gradient(180deg, #111827, #0e1117);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    z-index: 40;
+}
+
+.wrap {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 16px;
+    padding: 16px;
+}
+
+@media (max-width: 1080px) {
+    .wrap {
+        grid-template-columns: 1fr;
+    }
+}
+
+nav {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.row2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/*********************************************
+ * 3. COMPONENTS
+ *********************************************/
+
+/* 3.1 Buttons */
+button {
+    width: 100%;
+    background: #0b0f14;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: linear-gradient(180deg, #16a34a, #15803d);
+    border: none;
+}
+
+.btn-secondary {
+    background: linear-gradient(180deg, #2563eb, #1d4ed8);
+    border: none;
+}
+
+.btn-warn {
+    background: linear-gradient(180deg, #f59e0b, #b45309);
+    border: none;
+}
+
+.btn-market {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    background: var(--accent);
+    color: white;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    width: auto;
+    display: inline-block;
+}
+
+.btn-market:hover:not(:disabled) {
+    background: #1a9550;
+}
+
+.btn-market:disabled {
+    background: var(--muted);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* 3.2 Cards */
+.card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+}
+
+/* 3.3 Forms */
+label {
+    display: block;
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+select, input {
+    width: 100%;
+    background: #0b0f14;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 8px;
+}
+
+/* 3.4 Modal */
+.modal {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(0deg, rgba(2,6,23,0.6), rgba(2,6,23,0.6));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 60;
+}
+
+.modal .box {
+    width: 920px;
+    max-width: 96%;
+    background: var(--panel);
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+
+/* 3.5 Tabs */
+.tab {
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #0b0f14;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.tab.active {
+    background: linear-gradient(180deg, #2563eb, #1d4ed8);
+}
+
+/* 3.5 Modal Alert */
+.notification-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+    min-width: 300px;
+    text-align: center;
+}
+
+.notification-modal .message {
+    margin-bottom: 20px;
+    font-size: 1.1em;
+	color: red;
+}
+
+.notification-modal .btn-ok {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+}
+
+.notification-modal .btn-ok:hover {
+    background: #45a049;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+}
+
+/* 3.6 Modal Base Styles */
+.modal-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-container > div,
+.modal-container .transfer-modal { 
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    max-width: 500px;
+    width: 100%;
+    overflow: hidden;
+}
+
+.modal-header {
+    background: var(--accent);
+    color: white;
+    padding: 15px;
+    text-align: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.8em;
+    font-weight: 700;
+    color: white;
+}
+
+.modal-content {
+    padding: 20px;
+    color: #000;
+    font-weight: 700;
+}
+
+.player-details, 
+.offer-details {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.details-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    padding: 20px;
+    background: #f5f5f5;
+    border-radius: 0 0 8px 8px;
+}
+
+/* Button styles for modals */
+.btn-confirm,
+.btn-cancel {
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 160px;
+}
+
+.btn-confirm {
+    background: var(--accent);
+    color: white;
+	}
+
+.btn-cancel {
+    background: var(--danger);
+    color: white;
+}
+
+.btn-confirm:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+.btn-cancel:hover {
+    background: #b91c1c;
+    transform: translateY(-1px);
+}
+
+.transfer-modal {
+    width: 100%;
+}
+
+.transfer-modal[data-type="outgoing"] .modal-header {
+    background-color: #ff4444;
+}
+
+.transfer-modal[data-type="incoming"] .modal-header {
+    background-color: #44ff44;
+}
+
+.transfer-direction-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 8px;
+}
+
+.transfer-direction-row label {
+    color: #64748b;
+    font-weight: 500;
+    margin: 0;
+    display: block;
+}
+
+.transfer-direction {
+    color: #0f172a;
+    font-weight: 600;
+    display: block;
+    text-align: right;
+    flex: 1;
+    margin-left: 10px;
+}
+
+.player-section,
+.deal-section {
+    margin-bottom: 20px;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.player-info-grid,
+.deal-info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.info-item label {
+    color: #64748b;
+    font-weight: 500;
+    margin: 0;
+}
+
+.info-item span {
+    color: #0f172a;
+    font-weight: 600;
+}
+
+/* Stili per i titoli delle sezioni */
+.player-section h4,
+.deal-section h4 {
+    margin: 0 0 15px 0;
+    color: #0f172a;
+    font-size: 1.4em;
+}
+
+.negotiation-status {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f8fafc;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.status-message {
+    margin: 0;
+    font-size: 1.1em;
+    color: #0f172a;
+}
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .modal-container > div {
+        padding: 15px;
+        margin: 10px;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+    }
+
+    .modal-actions button {
+        width: 100%;
+    }
+}
+
+/*********************************************
+ * 4. MODULES
+ *********************************************/
+
+/* 4.1 Finance Module */
+.finance-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.finance-stats {
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.stat-row.total {
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 2px solid var(--border);
+    font-weight: bold;
+}
+
+.stat-row label {
+    color: var(--text);
+    margin: 0;
+}
+
+.stat-row .value {
+    font-weight: bold;
+}
+
+.value.positive { color: var(--accent); }
+.value.negative { color: var(--danger); }
+
+
+
+/* 4.2 Market Module */
+.squad-limits-info {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.column {
+    flex: 1;
+}
+
+.column:first-child {
+    border-right: 1px solid #ccc;
+    padding-right: 20px;
+}
+
+.stat-row {
+    margin-bottom: 10px;
+}
+
+.listed-status {
+    color: #666;
+    font-style: italic;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background-color: #f0f0f0;
+}
+
+#marketContent {
+    position: relative;
+}
+
+
+#marketContent .card.active {
+    display: block;
+}
+
+.market-tabs {
+    display: flex;
+    gap: 50px;
+    margin-bottom: 16px;
+    padding: 0;
+}
+
+.market-tab {
+    padding: 8px 16px;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 120px;
+    text-align: center;
+}
+
+.market-tab:hover {
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.market-tab.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.market-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.market-status.listed {
+    background: var(--warn);
+    color: #000;
+}
+
+.market-status.not-listed {
+    background: var(--muted);
+    color: var(--text);
+}
+
+
+.offer-status {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background-color: #ffd700;
+    color: #000;
+    font-size: 0.9em;
+    font-weight: 500;
+    text-align: center;
+    min-width: 100px;
+}
+
+.listed-status {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background-color: #4CAF50;
+    color: white;
+    font-size: 0.9em;
+    font-weight: 500;
+    min-width: 100px;
+    text-align: center;
+}
+
+
+
+
+/* 4.3 Player Ratings */
+.player-overall {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.high-rating { 
+    background-color: var(--accent); 
+    color: #fff; 
+}
+
+.good-rating { 
+    background-color: var(--accent2); 
+    color: #fff; 
+}
+
+.average-rating { 
+    background-color: var(--warn); 
+    color: #000; 
+}
+
+.low-rating { 
+    background-color: var(--danger); 
+    color: #fff; 
+}
+
+/* 4.4 Squad Stats */
+.squad-stats {
+    display: flex;
+    gap: 20px;
+    padding: 10px;
+    background: #1f2937;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.squad-stats > div {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.squad-stats span {
+    color: var(--text);
+    font-weight: bold;
+}
+
+.fixtures-container {
+    padding: 15px;
+}
+
+.fixtures-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+	gap: 50px;
+}
+
+.fixtures-navigation button {
+    padding: 5px 15px;
+    border: 1px solid #ddd;
+    background: #f5f5f5;
+    cursor: pointer;
+	color: black;
+}
+
+.fixtures-navigation button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.fixture-item {
+    display: grid;
+    grid-template-columns: 2fr 1fr 2fr;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+
+.fixture-item .home {
+    text-align: right;
+    padding-right: 10px;
+}
+
+.fixture-item .away {
+    text-align: left;
+    padding-left: 10px;
+}
+
+.fixture-item .score {
+    text-align: center;
+    font-weight: bold;
+    min-width: 60px;
+}
+
+.fixture-item.played .score {
+    background: #f0f0f0;
+    padding: 5px;
+    border-radius: 4px;
+	color: black;
+}
+
+.my-team {
+    font-weight: bold;
+    color: #2196F3;
+}
+
+/* 4.5 Pitch View */
+.pitch-view {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3/5;
+    background-image: url('../image/soccer.jpg');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    border: 2px solid #0f2b19;
+    overflow: hidden;
+}
+
+.pitch-view::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: rgba(26, 71, 42, 0.8);
+    pointer-events: none;
+}
+
+.pitch-view > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Position Slots */
+.position-slot {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    transform: translate(-50%, -50%);
+    border: 2px dashed rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.position-slot::after {
+    content: attr(data-roles);
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    color: rgba(255,255,255,0.8);
+    font-size: 12px;
+    background: rgba(0,0,0,0.6);
+    padding: 2px 8px;
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.position-slot:empty {
+    background: rgba(255,255,255,0.1);
+}
+
+.position-slot:empty::before {
+    content: '+';
+    font-size: 24px;
+    color: rgba(255,255,255,0.3);
+}
+
+.position-slot.drag-over {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: var(--accent);
+}
+
+/* Player Elements */
+.player-position-wrapper {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.player-dot {
+    width: 62px;
+    height: 62px;
+    background: #1f2937;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: var(--text);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.player-number {
+    font-size: 14px;
+    color: var(--text);
+    background: rgba(255,255,255,0.9);
+    color: #000;
+    width: 38px;
+    height: 38px;
+	line-height: 32px;
+    border-radius: 50%;
+    margin: 0 auto 4px;
+    font-weight: bold;
+	text-align: center;
+	border: 3px solid white;
+}
+
+.player-name {
+    font-size: 13px;
+}
+
+.player-label {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: var(--text);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    text-align: center;
+    margin-top: 5px;
+}
+
+/* Role-specific colors - My Team* */
+.player-number.role-GK { background: #1e3a8a; }
+.player-number.role-DC,
+.player-number.role-DR,
+.player-number.role-DL { background: #1e40af; }
+.player-number.role-MC,
+.player-number.role-MR,
+.player-number.role-ML { background: #065f46; }
+.player-number.role-ST,
+.player-number.role-FR,
+.player-number.role-FL { background: #9f1239; }
+
+/* Override*/
+.player-number.out-of-position {
+    background: #eed202;
+    color: #000;
+}
+
+/* Role-specific colors - Other Team*/
+.player-dot.role-GK { background: #1e3a8a; }
+.player-dot.role-DC, 
+.player-dot.role-DR, 
+.player-dot.role-DL { background: #1e40af; }
+.player-dot.role-MC, 
+.player-dot.role-MR, 
+.player-dot.role-ML { background: #065f46; }
+.player-dot.role-ST, 
+.player-dot.role-FR, 
+.player-dot.role-FL { background: #9f1239; }
+
+/* Status Indicators */
+.player-dot.out-of-position {
+    background: #eed202;
+}
+
+.player-number.out-of-position {
+    background-color: #ffd700;
+    color: #000;
+}
+
+/* 4.6 Roster/Squad Management */
+.roster-table {
+    width: 100%;
+    font-size: 13px;
+}
+
+.roster-table th,
+.roster-table td {
+    padding: 6px;
+    text-align: left;
+}
+
+.roster-table tr[draggable="true"] {
+    cursor: grab;
+}
+
+.roster-table tr[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.roster-table tr[draggable="true"]:hover {
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.roster-table tr:hover {
+    background: rgba(31, 41, 55, 0.5);
+    cursor: pointer;
+}
+
+.roster-table td:first-child {
+    font-weight: 500;
+}
+
+/* 4.7 Bench Area */
+.bench-slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    padding: 8px;
+    background: #1f2937;
+    border-radius: 8px;
+}
+
+.player-slot {
+    background: #161b22;
+    border: 1px solid #2d3748;
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.player-slot:hover {
+    border-color: var(--accent);
+}
+
+.player-slot.empty {
+    border-style: dashed;
+    color: var(--muted);
+}
+
+/*********************************************
+ * 5. UTILITIES
+ *********************************************/
+.flex {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.small {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.no-data {
+    text-align: center;
+    color: var(--muted);
+    padding: 20px;
+}
+
+.status-starting {
+    color: var(--accent);
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.status-sub {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.player-stat,
+.finance-table td[data-value],
+.market-table td[data-value],
+.value-indicator,
+.stat-row .value {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #1f2937;
+    min-width: 28px;
+    text-align: center;
+}
+
+/* Hover Effects */
+.player-position-wrapper:hover {
+    z-index: 2;
+}
+
+.player-position-wrapper:hover .player-dot {
+    transform: scale(1.1);
+}
+
+.player-position-wrapper:hover .player-label {
+    background: rgba(0, 0, 0, 0.9);
+}
+
+th[title] {
+    cursor: help;
+}
+
+

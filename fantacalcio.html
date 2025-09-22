@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="it">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1" />
+		<title>yuBan Football Manager</title>
+		<link rel="stylesheet" href="css/styles.css">
+	</head>
+	<body>
+		<!-- Intro modal -->
+		<div class="modal" id="introModal">
+			<div class="box">
+				<h2>Welcome — Manager</h2>
+				<p class="small">Please create a new league or load a file.</p>
+				<div class="row2">
+					<div>
+						<h3>Load file</h3>
+						<p class="small">Start from your saved file</p>
+						<button class="btn-secondary" id="loadSaveBtn">Carica</button>
+					</div>
+					<div>
+						<h3>New League</h3>
+						<label>Coach name</label>
+						<input id="mgrName" placeholder="Es: Mark" />
+						<label>Team Name</label>
+						<input id="teamName" placeholder="Es: FC my Team" />
+						<label>Number of teams in the league</label>
+						<select id="numTeams">
+							<option value="10">10</option>
+							<option value="16">16</option> 
+							<option value="18">18</option>
+						</select>
+						<div style="margin-top:8px" class="flex">
+							<button class="btn-primary" id="newCareerBtn">Create league</button>
+							<button id="guestBtn">Play as guest</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		
+		<header>
+			<h1>yuBan Football Manager</h1>
+			<nav>
+				<button class="tab active" data-tab="squadTab">My Team</button>
+				<button class="tab" data-tab="otherTab">Other Teams</button>
+				<button class="tab" data-tab="financeTab">Finance</button>
+				<button class="tab" data-tab="marketTab">Market</button>
+				<button class="tab" data-tab="leagueTab">Championship</button>
+				<button class="tab" data-tab="matchTab">Match</button>
+			</nav>
+		</header>
+		
+		<div class="wrap">
+			<aside class="card">
+				<div id="prePanel">
+					<h3>Team Info</h3>
+					<div class="small">Manager: <strong id="uiMgr">-</strong></div>
+					<div class="small">Team: <strong id="uiTeam">-</strong></div>
+					
+					<!-- Match Controls -->
+					<div id="matchControls" style="margin-top:12px">
+						<h3>Match Controls</h3>
+						<div style="margin-top:8px" class="flex">
+							<button class="btn-primary" id="goToMatch">Play Match</button>
+						</div>
+					</div>
+					
+					
+				</div>
+			</aside>
+			
+			<main class="card">
+				
+				
+				<!-- Tab: My Team -->
+				<div id="squadContent" style="display:none">
+					<h2>Squad & Tactics</h2>
+					
+					<div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
+						<div class="card">
+							<h3>Full Squad</h3>
+							<!-- Statistiche rapide della rosa -->
+							<div class="squad-stats">
+								<div>Players: <span id="totalPlayers">0</span></div>
+								<div>Avg Age: <span id="avgAge">0</span></div>
+								<div>Avg OVR: <span id="avgOvr">0</span></div>
+							</div>
+							
+							<table id="fullRoster" class="roster-table">
+								<!-- Header per Portieri -->
+								<tbody></tbody>
+							</table>
+						</div>
+						
+						<div class="card">
+							<h3>Tactics</h3>
+							<div class="tactics-container">
+								<div class="formation-select">
+									<label>Formation</label>
+									<select id="tacticsFormation">
+										<option value="442">4-4-2</option>
+										<option value="433">4-3-3</option>
+										<option value="343">3-4-3</option>										
+										<option value="352">3-5-2</option>
+										<option value="451">4-5-1</option>
+										<option value="541">5-4-1</option>
+									</select>
+								</div>
+								
+								<div class="formation-display">
+									<h4>Starting XI</h4>
+									<div id="startingXI" class="pitch-view">
+										<!-- Il campo verrà generato dinamicamente -->
+									</div>
+								</div>
+								
+							</div>
+						</div>
+					</div>
+				</div>
+				
+				<!-- Tab: Other Team -->
+				<div id="otherContent" class="content" style="display: none;">
+					<h2>Other Teams</h2>
+					
+					<div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
+						<div class="card">
+							<h3>Team Squad</h3>
+							
+							<!-- Team Selector -->
+							<select id="teamSelector">
+								<option value="">Select the team</option>
+							</select>
+							
+							<!-- Statistiche rapide della rosa -->
+							<div class="squad-stats">
+								<div>Players: <span id="otherTotalPlayers">0</span></div>
+								<div>Avg Age: <span id="otherAvgAge">0</span></div>
+								<div>Avg OVR: <span id="otherAvgOvr">0</span></div>
+							</div>
+							
+							<table id="otherRoster" class="roster-table">
+								<thead>
+									<tr>
+										<th>Name</th>
+										<th>Role</th>
+										<th>Age</th>
+										<th>PAC</th>
+										<th>PAS</th>
+										<th>SHO</th>
+										<th>DEF</th>
+										<th>DRI</th>
+										<th>TAC</th>
+										<th>Form</th>
+										<th>OVR</th>
+										<th>Status</th>
+									</tr>
+								</thead>
+								<tbody></tbody>
+							</table>
+						</div>
+						
+						<div class="card">
+							<h3>Team Formation</h3>
+							<div class="tactics-container">
+								<div class="formation-display">
+									<div class="squad-stats">
+										<div>Formation: <span id="otherFormation">-</span></div>
+									</div>
+									<div id="otherStartingXI" class="pitch-view">
+										<!-- Il campo verrà generato dinamicamente -->
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				
+				<!-- Tab: Finance -->
+				<div id="financeContent" style="display:none">
+					<h2>Finance Overview</h2>
+					
+					<div class="finance-grid">
+						<!-- Weekly Summary -->
+						<div class="card">
+							<h3>Weekly Summary</h3>
+							<div class="finance-stats">
+								<div class="stat-row">
+									<label>Cash Balance</label>
+									<div class="value" id="cashBalance">€0M</div>
+								</div>
+								<div class="stat-row">
+									<label>Weekly Income</label>
+									<div class="value" id="weeklyIncome">€0M</div>
+								</div>
+								<div class="stat-row">
+									<label>Weekly Expenses</label>
+									<div class="value" id="weeklyExpenses">€0M</div>
+								</div>
+								<div class="stat-row total">
+									<label>Weekly Balance</label>
+									<div class="value" id="weeklyBalance">€0M</div>
+								</div>
+							</div>
+						</div>
+						
+						<!-- Income Details -->
+						<div class="card">
+							<h3>Income Sources</h3>
+							<div class="finance-stats">
+								<div class="stat-row">
+									<label>Sponsorships</label>
+									<div class="value" id="sponsorIncome">€0M</div>
+								</div>
+								<div class="stat-row">
+									<label>Match Tickets Revenue</label>
+									<div class="value" id="matchIncome">€0M</div>
+								</div>
+								<div class="stat-row">
+									<label>Bonus TV Winning Income</label>
+									<div class="value" id="otherIncome">€0M</div>
+								</div>
+							</div>
+						</div>
+						
+						<!-- Expenses Details -->
+						<div class="card">
+							<h3>Expenses</h3>
+							<div class="finance-stats">
+								<div class="stat-row">
+									<label>Total Wages (Weekly)</label>
+									<div class="value" id="totalWages">€0M</div>
+								</div>
+								<div class="stat-row">
+									<label>Facility Costs</label>
+									<div class="value" id="facilityCosts">€0M</div>
+								</div>
+								<div class="stat-row">
+									<label>Other Expenses</label>
+									<div class="value" id="otherExpenses">€0M</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					
+					<!-- Squad Wages Table -->
+					<div class="table-container">
+						<h3>Squad Wages</h3>
+						<table class="finance-table">
+							<thead>
+								<tr>
+									<th>Name</th>
+									<th>Roles</th>									
+									<th>Age</th>
+									<th>Overall</th>
+									<th>Contract</th>
+									<th>Weekly Salary</th>
+									<th>Value</th>
+									<th>Market Status</th>
+									<th>Actions</th>
+								</tr>
+							</thead>
+							<tbody id="squadWagesTable">
+								<!-- Populated dynamically -->
+							</tbody>
+						</table>
+					</div>
+				</div>
+				
+				<!-- Tab: Market -->
+				<div id="marketContent">
+					<h2>Transfer Market</h2>
+					
+				<!-- Squad Limits Info -->
+				<div class="market-debug card">
+					<div class="squad-limits-info">
+						<!-- Left Column -->
+						<div class="column">
+							<h3>Squad Limits</h3>
+							<div class="stat-row">
+								<label>Squad Size:</label>
+								<span class="value-indicator" id="squadSize">0/0</span>
+							</div>
+							<div class="stat-row">
+								<label>Weekly Wage Budget:</label>
+								<span class="value-indicator" id="weeklyWageBudget">€0M</span>
+							</div>
+							<div class="stat-row">
+								<label>Current Weekly Wages:</label>
+								<span class="value-indicator" id="currentWeeklyWages">€0M</span>
+							</div>
+							<div class="stat-row">
+								<label>Available Wage Budget:</label>
+								<span class="value-indicator" id="availableWageBudget">€0M</span>
+							</div>
+							<div class="stat-row">
+								<label>Balance:</label>
+								<span class="value-indicator" id="transferBudget">€0M</span>
+							</div>
+						</div>
+						
+						<!-- Right Column -->
+						<div class="column">
+							<h3>Players per Role:</h3>
+							<div class="role-limits">
+								<div class="stat-row">
+									<label>Goalkeepers (G):</label>
+									<span class="value-indicator" id="gkCount">0/4</span>
+								</div>
+								<div class="stat-row">
+									<label>Defenders (D):</label>
+									<span class="value-indicator" id="defCount">0/4</span>
+								</div>
+								<div class="stat-row">
+									<label>Midfielders (M):</label>
+									<span class="value-indicator" id="midCount">0/4</span>
+								</div>
+								<div class="stat-row">
+									<label>Forwards (F):</label>
+									<span class="value-indicator" id="attCount">0/4</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+					
+					<!-- Transfer Listed Players -->
+					<div id="transferListContent">
+						<div class="table-container">
+							<h3>Transfer Listed Players</h3>
+							<table class="market-table">
+								<thead>
+									<tr>
+										<th>Name</th>
+										<th>Roles</th>					
+										<th>Team</th>
+										<th>Age</th>
+										<th>Overall</th>
+										<th>Salary</th>
+										<th>Value</th>
+										<th>Actions</th>
+									</tr>
+								</thead>
+								<tbody id="transferListTable">
+									<!-- Populated dynamically -->
+								</tbody>
+							</table>
+							
+							<h3>Free Agents</h3>
+							<table class="market-table">
+								<thead>
+									<tr>
+										<th>Name</th>
+										<th>Roles</th>					
+										<th>Age</th>
+										<th>Overall</th>
+										<th>Requested Salary</th>
+										<th>Actions</th>
+									</tr>
+								</thead>
+								<tbody id="freeAgentsTable">
+									<!-- Populated dynamically -->
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+				
+				
+				
+				
+				
+				<!-- Tab: Championship -->
+				<div id="leagueContent" style="display:none">
+					<h2>Championship Overview</h2>
+					<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+						<div class="card">
+							<h4>League Table</h4>
+							<table id="leagueTable"></table>
+						</div>
+						<div class="card">
+							<h4>Match Schedule</h4>
+							<div class="fixtures-container">
+								<div class="fixtures-navigation"></div>
+								<div id="fixtures" class="fixtures-list"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+				
+				<!-- Tab: Match Preview -->
+				<div id="matchPreviewContent" style="display:none">
+					<div class="card">
+						<h2>Match Preview</h2>
+						<div class="match-preview-container">
+							<div class="team-formations">
+								<!-- Your Team -->
+								<div class="team-formation-side">
+									<h3 id="homeTeamName">Your Team</h3>
+									<div class="formation-info">
+										<span>Formation: </span><span id="homeFormation">4-4-2</span>
+									</div>
+									<div id="homeTeamFormation" class="pitch-view preview-pitch">
+										<!-- Formation will be rendered here -->
+									</div>
+								</div>
+								
+								<!-- VS Section -->
+								<div class="vs-section">
+									<div class="vs-text">VS</div>
+									<div class="match-actions">
+										<button id="playMatchBtn" class="btn-primary">Play Match</button>
+										<button id="modifyFormationBtn" class="btn-secondary">Modify Formation</button>
+									</div>
+								</div>
+								
+								<!-- Opponent Team -->
+								<div class="team-formation-side">
+									<h3 id="awayTeamName">Opponent</h3>
+									<div class="formation-info">
+										<span>Formation: </span><span id="awayFormation">4-4-2</span>
+									</div>
+									<div id="awayTeamFormation" class="pitch-view preview-pitch">
+										<!-- Formation will be rendered here -->
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				
+				<!-- Tab: Partita -->
+				<div id="matchContent" style="display:none">
+					<div class="scoreboard" id="scoreboard"></div>
+					<div style="margin-top:8px" class="log card" id="log"></div>
+					<div style="margin-top:8px" class="grid" id="matchStats"></div>
+				</div>
+				
+				
+				
+				
+				
+
+				
+				
+				<template id="contractNegotiationTemplate">
+					<div class="transfer-modal">
+						<div class="modal-header">
+							<h3>Contract Negotiation</h3>
+						</div>
+						<div class="modal-content">
+							<div class="player-details">
+								<h4 class="player-name"></h4>
+								<div class="details-grid">
+									<div class="detail-row">
+										<span>Current Weekly Wage:</span>
+										<span class="current-wage"></span>
+									</div>
+									<div class="detail-row">
+										<span>Offered Weekly Wage:</span>
+										<span class="offered-wage"></span>
+									</div>
+									<div class="detail-row">
+										<span>Contract Length:</span>
+										<span class="contract-length"></span>
+									</div>
+								</div>
+							</div>
+							<div class="negotiation-status">
+								<p class="status-message"></p>
+							</div>
+						</div>
+						<div class="modal-actions">
+							<button class="btn-confirm">Continue</button>
+							<button class="btn-cancel">Cancel</button>
+						</div>
+					</div>
+				</template>
+				
+				<template id="transferConfirmationTemplate">
+					<div class="transfer-modal">
+						<div class="modal-header">
+							<h3>Transfer Confirmation</h3>
+						</div>
+						<div class="modal-content">
+							<div class="player-section">
+								<h4 class="player-name"></h4>
+								<div class="player-info-grid">
+									<div class="info-item">
+										<label>Age:</label>
+										<span class="player-age"></span>
+									</div>
+									<div class="info-item">
+										<label>Position:</label>
+										<span class="player-position"></span>
+									</div>
+									<div class="info-item">
+										<label>Overall:</label>
+										<span class="player-overall"></span>
+									</div>
+								</div>
+							</div>
+							
+							<div class="deal-section">
+								<h4>Deal Terms</h4>
+								<div class="deal-info-grid">
+									<div class="info-item transfer-direction-row">
+										<label>Transfer Direction</label>
+										<span class="transfer-direction"></span>
+									</div>
+									<div class="info-item">
+										<label>Transfer Fee:</label>
+										<span class="transfer-fee"></span>
+									</div>
+									<div class="info-item">
+										<label>Weekly Wage:</label>
+										<span class="weekly-wage"></span>
+									</div>
+									<div class="info-item">
+										<label>Contract Length:</label>
+										<span class="contract-length"></span>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="modal-actions">
+							<button class="btn-confirm">Complete Transfer</button>
+							<button class="btn-cancel">Cancel Transfer</button>
+						</div>
+					</div>
+				</template>		
+				
+			</main>
+		</div>
+		
+	</main>
+</div>
+<!-- 1. Prima le costanti -->
+<script src="js/constants.js"></script>
+
+<!-- 2. Poi i generatori -->
+<script src="js/generator/playerGenerator.js"></script>
+<script src="js/generator/teamGenerator.js"></script>
+<script src="js/generator/leagueGenerator.js"></script>
+
+<!-- 3. Lo stato e le utilities -->
+<script src="js/state.js"></script>
+<script src="js/utils.js"></script>
+
+<!-- Engine di gioco -->
+<script src="js/engine.js"></script>	
+
+<!-- 4. I moduli UI comuni -->
+<script src="js/ui/commonUI.js"></script>
+
+<!-- 5. I moduli UI specifici -->
+<script src="js/ui/financeUI.js"></script>
+<script src="js/ui/squadUI.js"></script>
+<script src="js/ui/leagueUI.js"></script>
+
+<!-- Market System -->
+<!-- a. Utility e funzioni base -->
+<script src="js/market/marketUtils.js"></script>
+
+<!-- b. Validazioni -->
+<script src="js/market/marketValidation.js"></script>
+
+<!-- c. Gestione offerte e trasferimenti -->
+<script src="js/market/marketOffers.js"></script>
+<script src="js/market/marketAgents.js"></script>
+<script src="js/market/marketTransfers.js"></script>
+
+<!-- d. Gestione negoziazioni -->
+<script src="js/market/marketNegotiations.js"></script>
+
+<!-- e. UI e Display -->
+<script src="js/market/marketModals.js"></script>
+<script src="js/market/marketDisplay.js"></script>
+<script src="js/market/marketListings.js"></script>
+<script src="js/market/marketUI.js"></script>
+
+<!-- 6. La logica di gioco -->
+<script src="js/league.js"></script>
+<script src="js/tactics.js"></script>
+
+<!-- 7. Il controller UI principale -->
+<script src="js/ui/ui.js"></script>
+<script src="js/ui/matchPreview.js"></script>
+
+<!-- 8. Il main come ultimo file -->
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,1157 @@
+:root{--bg:#0e1117;--panel:#161b22;--muted:#94a3b8;--text:#e5e7eb;--accent:#22c55e;--accent2:#60a5fa;--danger:#ef4444;--warn:#f59e0b}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto;background:var(--bg);color:var(--text)}
+header{position:sticky;top:0;background:linear-gradient(180deg,#111827,#0e1117);border-bottom:1px solid #222;padding:12px 16px;z-index:40}
+h1{margin:0;font-size:18px}
+nav{display:flex;gap:8px;margin-top:8px}
+.tab{padding:8px 12px;border-radius:999px;border:1px solid #222;background:#0b0f14;cursor:pointer;font-weight:600}
+.tab.active{background:linear-gradient(180deg,#2563eb,#1d4ed8)}
+.wrap{display:grid;grid-template-columns:340px 1fr;gap:16px;padding:16px}
+@media(max-width:1080px){.wrap{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid #222;border-radius:12px;padding:12px}
+label{display:block;color:var(--muted);font-size:13px;margin-bottom:6px}
+select,input,button{width:100%;background:#0b0f14;border:1px solid #222;color:var(--text);padding:8px 10px;border-radius:8px}
+button{font-weight:700;cursor:pointer}
+.btn-primary{background:linear-gradient(180deg,#16a34a,#15803d);border:none}
+.btn-secondary{background:linear-gradient(180deg,#2563eb,#1d4ed8);border:none}
+.btn-warn{background:linear-gradient(180deg,#f59e0b,#b45309);border:none}
+.flex{display:flex;gap:8px;align-items:center}
+.pill{padding:4px 8px;border-radius:999px;background:#0a0f15;border:1px solid #1f2937;color:#93c5fd}
+.log{height:44vh;overflow:auto;padding:10px;border-radius:8px;border:1px solid #222;background:#0b0f14}
+.line{margin:6px 0}
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:8px;border-radius:8px;border:1px dashed #334155;background:#0b0f14}
+.slot{min-height:44px;padding:6px;border-radius:8px;border:1px dashed #334155}
+.player{padding:6px 8px;border-radius:8px;background:#111827;border:1px solid #222;cursor:grab;display:flex;justify-content:space-between}
+table{width:100%;border-collapse:collapse}
+th,td{padding:6px;border-bottom:1px solid #222;text-align:left;font-size:13px}
+.modal{position:fixed;inset:0;background:linear-gradient(0deg,rgba(2,6,23,0.6),rgba(2,6,23,0.6));display:flex;align-items:center;justify-content:center;z-index:60}
+.modal .box{width:920px;max-width:96%;background:var(--panel);padding:20px;border-radius:12px;border:1px solid #222}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.small{font-size:13px;color:var(--muted)}
+
+.kpis{display:flex;gap:8px}
+
+.roster-table {
+	width: 100%;
+	font-size: 13px;
+}
+
+.roster-table th,
+.roster-table td {
+	padding: 6px;
+	text-align: left;
+}
+
+.roster-table tr[draggable="true"] {
+    cursor: grab;
+}
+
+.roster-table tr[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.roster-table tr[draggable="true"]:hover {
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.position-slot.drag-over {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: var(--accent);
+}
+
+.starting-xi {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.player-overall {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.high-rating {
+    background-color: #22c55e;
+    color: #fff;
+}
+
+.good-rating {
+    background-color: #84cc16;
+    color: #fff;
+}
+
+.average-rating {
+    background-color: #eab308;
+    color: #fff;
+}
+
+.low-rating {
+    background-color: #ef4444;
+    color: #fff;
+}
+
+/*finance*/
+
+.finance-stats {
+	background: #0b0f14;
+	border-radius: 8px;
+	padding: 12px;
+}
+
+.stat-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px 0;
+	border-bottom: 1px solid #222;
+}
+
+.stat-row:last-child {
+	border-bottom: none;
+}
+
+.stat-row label {
+	margin: 0;
+	color: var(--text);
+}
+
+.market-tabs {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.market-tab {
+	padding: 6px 12px;
+	border-radius: 6px;
+	background: #0b0f14;
+	border: 1px solid #222;
+	color: var(--text);
+	cursor: pointer;
+}
+
+.market-tab.active {
+	background: var(--accent);
+	border-color: var(--accent);
+}
+
+.market-item {
+	display: grid;
+	grid-template-columns: 1fr auto auto;
+	gap: 12px;
+	align-items: center;
+	padding: 12px;
+	background: #0b0f14;
+	border: 1px solid #222;
+	border-radius: 8px;
+	margin-bottom: 8px;
+}
+
+.player-offer {
+	background: #1f2937;
+	padding: 8px;
+	border-radius: 6px;
+	margin-top: 8px;
+}
+
+/*squad stat*/
+
+.squad-stats {
+    display: flex;
+    gap: 20px;
+    padding: 10px;
+    background: #1f2937;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.squad-stats > div {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.squad-stats span {
+    color: var(--text);
+    font-weight: bold;
+}
+
+.tactics-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 450px;
+}
+
+.formation-select {
+    margin-bottom: 16px;
+}
+
+.formation-display {
+    width: 100%;
+    min-width: 450px;
+}
+
+.field-player, .bench-player {
+    cursor: move;
+    user-select: none;
+}
+
+.field-player.dragging, .bench-player.dragging {
+    opacity: 0.5;
+}
+
+.field-player.drag-over, .bench-player.drag-over {
+    border: 2px dashed #4CAF50;
+}
+
+.pitch-view {
+    position: relative;
+    width: 100%;
+    min-width: 450px;
+    min-height: 750px;
+    background-image: url('../image/soccer.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    border: 2px solid #0f2b19;
+    overflow: hidden; 
+}
+
+.pitch-view::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(26, 71, 42, 0.8);
+    pointer-events: none;
+}
+
+.pitch-view > * {
+    position: relative;
+    z-index: 1;
+}
+
+.position-slot {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    transform: translate(-50%, -50%);
+    border: 2px dashed rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.position-slot::after {
+    content: attr(data-roles);
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    color: rgba(255,255,255,0.8);
+    font-size: 12px;
+    background: rgba(0,0,0,0.6);
+    padding: 2px 8px;
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.position-slot:empty {
+    background: rgba(255,255,255,0.1);
+}
+
+.position-slot:empty::before {
+    content: '+';
+    font-size: 24px;
+    color: rgba(255,255,255,0.3);
+}
+
+.bench-slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    padding: 8px;
+    background: #1f2937;
+    border-radius: 8px;
+}
+
+.player-slot {
+    background: #161b22;
+    border: 1px solid #2d3748;
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.player-slot:hover {
+    border-color: var(--accent);
+}
+
+.player-slot.empty {
+    border-style: dashed;
+    color: var(--muted);
+}
+
+th[title] {
+    cursor: help;
+}
+
+.player-starting {
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.status-starting {
+    color: #22c55e;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.status-sub {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.player-stat {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #1f2937;
+    min-width: 28px;
+    text-align: center;
+}
+
+.position-header strong {
+    color: #60a5fa;
+}
+
+.roster-table tr:hover {
+    background: rgba(31, 41, 55, 0.5);
+    cursor: pointer;
+}
+
+.roster-table td:first-child {
+    font-weight: 500;
+}
+
+/* player Pitch */
+
+.pitch-view {
+    background-color: #1a472a;
+    border-radius: 8px;
+    position: relative;
+    width: 100%;
+    height: 400px;
+    margin-bottom: 16px;
+}
+
+.player-position {
+    position: absolute;
+    width: 60px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.player-number {
+    background: rgba(255,255,255,0.9);
+    color: #000;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    line-height: 24px;
+    margin: 0 auto 4px;
+    font-weight: bold;
+}
+
+.player-number.out-of-position {
+    background-color: #ffd700;
+    color: #000;
+}
+
+.field-player.out-of-position {
+    opacity: 0.8;
+}
+
+.player-name {
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.player-position:hover  {
+    background: #22c55e;
+    color: white;
+}
+
+/* Other Team Styles */
+#otherContent .field {
+    background-color: #1a472a;
+    border: 2px solid #0f2b19;
+    border-radius: 8px;
+    position: relative;
+    width: 100%;
+    height: 400px;
+    margin-bottom: 16px;
+}
+
+#otherContent .field::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    height: 90%;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+}
+
+#otherContent .quick-stats {
+    display: flex;
+    gap: 20px;
+    padding: 10px;
+    background: #1f2937;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+#otherContent .quick-stats > div {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+#otherContent .quick-stats span {
+    color: var(--text);
+    font-weight: bold;
+}
+
+#teamSelector {
+    width: 100%;
+    background: #0b0f14;
+    border: 1px solid #222;
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+}
+
+#otherRoster {
+    width: 100%;
+    border-collapse: collapse;
+    background: transparent;
+    font-size: 13px;
+}
+
+#otherRoster th,
+#otherRoster td {
+    padding: 6px;
+    border-bottom: 1px solid #222;
+    text-align: left;
+    color: var(--text);
+}
+
+#otherRoster th {
+    background: #161b22;
+    font-weight: bold;
+}
+
+#otherRoster .position-header td {
+    background: #1f2937;
+    color: #60a5fa;
+    font-weight: bold;
+}
+
+#otherRoster .player-stat {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #1f2937;
+    min-width: 28px;
+    text-align: center;
+}
+
+#otherRoster .player-overall {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    text-align: center;
+}
+
+#otherRoster .high-rating { background: var(--accent); color: #fff; }
+#otherRoster .good-rating { background: var(--accent2); color: #fff; }
+#otherRoster .average-rating { background: var(--warn); color: #000; }
+#otherRoster .low-rating { background: var(--danger); color: #fff; }
+
+#otherRoster .status-starting {
+    color: var(--accent);
+    font-weight: bold;
+    font-size: 12px;
+}
+
+#otherRoster .status-sub {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+#otherRoster tr:hover {
+    background: rgba(31, 41, 55, 0.5);
+}
+
+
+#otherContent .field-player {
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 50%;
+    color: white;
+    cursor: default;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    /* Rimuovi il padding */
+}
+
+#otherContent .player-number {
+    background: rgba(255,255,255,0.9);
+    color: #000;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    line-height: 24px;
+    text-align: center;
+    margin-bottom: 2px; /* Riduci il margin */
+    font-weight: bold;
+    font-size: 14px;
+}
+
+#otherContent .player-name {
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90%;
+    text-align: center;
+    color: white;
+}
+
+#otherContent .field-player.out-of-position .player-number {
+    background: #ffd700;
+    color: #000;
+}
+
+#otherContent .position-slot {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    transform: translate(-50%, -50%);
+    border: 2px dashed rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.player-position-wrapper {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.player-dot {
+    width: 62px;
+    height: 62px;
+    background: #1f2937;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: var(--text);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.player-number {
+    font-size: 14px;
+    color: var(--text);
+}
+
+.player-label {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: var(--text);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    text-align: center;
+    margin-top: 5px; /* Distanza positiva dal dot */
+}
+
+/* Colori per ruoli */
+.player-dot.role-GK { background: #1e3a8a; }
+.player-dot.role-DC, 
+.player-dot.role-DR, 
+.player-dot.role-DL { background: #1e40af; }
+.player-dot.role-MC, 
+.player-dot.role-MR, 
+.player-dot.role-ML { background: #065f46; }
+.player-dot.role-ST, 
+.player-dot.role-FR, 
+.player-dot.role-FL { background: #9f1239; }
+
+.player-dot.out-of-position {
+    background: #eed202;
+}
+
+/* Hover effects */
+.player-position-wrapper:hover {
+    z-index: 2;
+}
+
+.player-position-wrapper:hover .player-dot {
+    transform: scale(1.1);
+}
+
+.player-position-wrapper:hover .player-label {
+    background: rgba(0, 0, 0, 0.9);
+}
+
+
+/* Finance & Market Styles */
+.finance-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.finance-stats {
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #2d3748;
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.stat-row.total {
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 2px solid #2d3748;
+    font-weight: bold;
+}
+
+.stat-row label {
+    color: var(--text);
+    margin: 0;
+}
+
+.stat-row .value {
+    font-weight: bold;
+}
+
+.value.positive {
+    color: var(--accent);
+}
+
+.value.negative {
+    color: var(--danger);
+}
+
+/* Tables */
+.finance-table, .market-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+}
+
+.finance-table th,
+.market-table th {
+    background: var(--panel);
+    padding: 10px;
+    text-align: left;
+    font-weight: bold;
+    border-bottom: 2px solid #2d3748;
+}
+
+.finance-table td,
+.market-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #2d3748;
+}
+
+/* Market Status Labels */
+.market-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.market-status.listed {
+    background: var(--warn);
+    color: #000;
+}
+
+.market-status.not-listed {
+    background: var(--muted);
+    color: var(--text);
+}
+
+
+
+/* Market styles */
+.market-tab.active {
+    background: #007bff;
+    color: white;
+}
+
+#marketContent .card {
+    display: none;
+}
+
+#marketContent .card.active {
+    display: block;
+}
+
+.market-tab {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    background: var(--panel);
+    cursor: pointer;
+}
+
+.market-tab.active {
+    background: var(--accent);
+    color: white;
+}
+
+.market-table, .finance-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+}
+
+.market-table th,
+.finance-table th {
+    text-align: left;
+    padding: 12px;
+    background: var(--panel);
+    border-bottom: 2px solid var(--border);
+}
+
+.market-table td,
+.finance-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.btn-market {
+    padding: 4px 8px;
+    border: none;
+    border-radius: 4px;
+    background: var(--accent);
+    color: white;
+    cursor: pointer;
+}
+
+.btn-market:disabled {
+    background: var(--muted);
+    cursor: not-allowed;
+}
+
+.market-status {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.market-status.listed {
+    background: var(--warn);
+    color: black;
+}
+
+.market-status.not-listed {
+    background: var(--muted);
+    color: var(--text);
+}
+
+.no-data {
+    text-align: center;
+    color: var(--muted);
+    padding: 20px;
+}
+/* Rimuovi o commenta le regole conflittuali esistenti e aggiungi queste specifiche */
+
+/* Market Tab Styles */
+#marketContent {
+    position: relative;
+}
+
+#marketContent .card {
+    display: none; /* Nascondi di default */
+    margin-top: 16px;
+}
+
+#marketContent .card.active {
+    display: block; /* Mostra solo se attivo */
+}
+
+.market-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 0;
+}
+
+.market-tab {
+    padding: 8px 16px;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 120px;
+    text-align: center;
+}
+
+.market-tab:hover {
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.market-tab.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+/* Table Styles */
+.market-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.market-table th {
+    background: var(--panel);
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid var(--accent);
+}
+
+.market-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #2d3748;
+}
+
+.market-table tr:hover {
+    background: rgba(34, 197, 94, 0.05);
+}
+
+/* Ensure no conflicts with other styles */
+#transferListContent,
+#freeAgentsContent {
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+/* Actions Buttons */
+.btn-market {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    background: var(--accent);
+    color: white;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    width: auto; /* Override any full-width settings */
+}
+
+.btn-market:hover:not(:disabled) {
+    background: #1a9550;
+}
+
+.btn-market:disabled {
+    background: var(--muted);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.btn-list {
+    background: var(--accent);
+    color: white;
+}
+
+.btn-make-offer {
+    background: var(--accent2);
+    color: white;
+}
+
+.btn-cancel {
+    background: var(--danger);
+    color: white;
+}
+
+/* Match Preview Styles - FORCE HORIZONTAL LAYOUT */
+#matchPreviewContent {
+    width: 100% !important;
+    min-width: 900px !important;
+}
+
+#matchPreviewContent .card {
+    width: 100% !important;
+    min-width: 900px !important;
+    overflow: visible !important;
+}
+
+.match-preview-container {
+    padding: 20px !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    display: block !important;
+    position: relative !important;
+}
+
+/* FORCE HORIZONTAL LAYOUT WITH MULTIPLE METHODS */
+.team-formations {
+    display: table !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: separate !important;
+    border-spacing: 20px 0 !important;
+    /* Debug borders - remove later */
+    border: 2px solid red !important;
+}
+
+.team-formations > div {
+    display: table-cell !important;
+    vertical-align: top !important;
+}
+
+.team-formation-side {
+    width: 40% !important;
+    display: table-cell !important;
+    vertical-align: top !important;
+    text-align: center !important;
+    /* Debug borders - remove later */
+    border: 1px solid blue !important;
+}
+
+.vs-section {
+    width: 20% !important;
+    display: table-cell !important;
+    vertical-align: top !important;
+    text-align: center !important;
+    padding: 20px 15px !important;
+    /* Debug borders - remove later */
+    border: 1px solid green !important;
+}
+
+.team-formation-side h3 {
+    margin: 0 0 10px 0 !important;
+    color: var(--text) !important;
+    font-size: 20px !important;
+    font-weight: bold !important;
+    text-align: center !important;
+}
+
+.formation-info {
+    margin-bottom: 15px !important;
+    color: var(--muted) !important;
+    font-size: 14px !important;
+    text-align: center !important;
+}
+
+.formation-info span:last-child {
+    color: var(--accent) !important;
+    font-weight: bold !important;
+}
+
+.preview-pitch {
+    width: 280px !important;
+    height: 380px !important;
+    background: linear-gradient(180deg, #1a4b3a 0%, #0d2818 100%) !important;
+    border: 2px solid #fff !important;
+    border-radius: 8px !important;
+    position: relative !important;
+    margin: 0 auto !important;
+    display: block !important;
+}
+
+.vs-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 20px;
+    padding: 20px 15px;
+    /* Debug borders - remove later */
+    border: 1px solid green;
+}
+
+.vs-text {
+    font-size: 28px !important;
+    font-weight: bold !important;
+    color: var(--accent) !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5) !important;
+    margin: 60px 0 20px 0 !important;
+    display: block !important;
+}
+
+.match-actions {
+    display: block !important;
+    text-align: center !important;
+}
+
+.match-actions button {
+    display: block !important;
+    margin: 8px auto !important;
+    width: 160px !important;
+    padding: 12px 20px !important;
+    border-radius: 8px !important;
+}
+
+.match-actions button {
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.match-actions .btn-primary {
+    background: linear-gradient(180deg, var(--accent), #16803d);
+    color: white;
+}
+
+.match-actions .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.match-actions .btn-secondary {
+    background: linear-gradient(180deg, var(--accent2), #1d4ed8);
+    color: white;
+}
+
+.match-actions .btn-secondary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
+}
+
+/* Preview pitch styling - smaller than main pitch */
+.preview-pitch .player-position-wrapper {
+    position: absolute;
+    transform: translate(-50%, -50%);
+}
+
+.preview-pitch .player-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.preview-pitch .player-label {
+    position: absolute;
+    top: 36px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    white-space: nowrap;
+    text-align: center;
+    background: rgba(0,0,0,0.5);
+    padding: 3px 6px;
+    border-radius: 4px;
+    min-width: 70px;
+    line-height: 1.2;
+}
+
+@media (max-width: 1024px) {
+    .team-formations {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+        gap: 20px;
+    }
+    
+    .vs-section {
+        order: 2;
+    }
+    
+    .team-formation-side:first-child {
+        order: 1;
+    }
+    
+    .team-formation-side:last-child {
+        order: 3;
+    }
+    
+    .preview-pitch {
+        width: 300px;
+        height: 380px;
+    }
+    
+    .match-actions {
+        flex-direction: row;
+        min-width: auto;
+        gap: 8px;
+    }
+    
+    .match-actions button {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+}
