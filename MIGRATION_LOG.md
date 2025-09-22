@@ -34,3 +34,7 @@ Next steps:
 - Squad tab reworked to "My Team": new `features/Squad.jsx` allows formation selection, manual starting XI toggles, auto-pick XI and clear.
 - Team generation no longer auto-sets starters; all players start as bench to allow manual selection similar to vanilla.
 - Added safe constants fallbacks (names/stats) to ensure reliable seeding.
+
+## 2025-09-22 (cont. 5)
+- Updated team generator to produce squads with 3 GK, 7 DF, 7 MF, 4 FW by role distribution.
+- My Team tab now groups roster by role and shows a field preview that places the selected XI by section; DnD full assignment can be added next.

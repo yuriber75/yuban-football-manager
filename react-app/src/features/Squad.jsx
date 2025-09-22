@@ -19,10 +19,11 @@ export default function Squad() {
   const { state, setState, saveNow } = useGameState()
   const team = state.teams.find(t => t.name === state.teamName)
   const [formation, setFormation] = useState(team?.tactics?.formation || '442')
+  const [hover, setHover] = useState(null) // { sec, idx, valid }
 
   const players = useMemo(() => (team?.players || []).map(p => ({ ...p, section: roleSection(p.primaryRole) })), [team])
-  const starters = players.filter(p => p.starting)
-  const bench = players.filter(p => !p.starting)
+  const starters = players.filter(p => p.starting || p.slot)
+  const bench = players.filter(p => !p.starting && !p.slot)
   const positions = GAME_CONSTANTS.POSITION_ROLES[formation]
 
   if (!team) return <div className="card">No team found. Start a career.</div>
@@ -34,60 +35,99 @@ export default function Squad() {
   }
 
   function clearStarters() {
-    updateTeam(players.map(p => ({ ...p, starting: false })))
+    updateTeam(players.map(p => ({ ...p, starting: false, slot: undefined })))
   }
 
   function autoPick() {
-    const req = requiredCounts(formation)
-    const next = players.map(p => ({ ...p, starting: false }))
-    // GK
-    let picked = 0
-    next.sort((a,b)=> b.overall - a.overall)
-    for (const p of next) { if (p.primaryRole === 'GK' && !p.starting && picked < 1) { p.starting = true; picked++ } }
-    // DF/MF/FW by section
-    for (const sec of ['DF','MF','FW']) {
-      const need = req[sec]
-      picked = 0
-      for (const p of next) {
-        if (!p.starting && p.section === sec) { p.starting = true; picked++; if (picked >= need) break }
+    const next = players.map(p => ({ ...p, starting: false, slot: undefined }))
+    // helper: pick best by section and assign sequentially to slots
+    const pickForSection = (sec) => {
+      const slots = positions[sec]
+      const pool = next.filter(p => p.section === sec).sort((a,b)=> b.overall - a.overall)
+      for (let i = 0; i < slots.length && i < pool.length; i++) {
+        const p = pool[i]
+        p.starting = true
+        p.slot = { section: sec, index: i }
       }
+    }
+    pickForSection('GK')
+    pickForSection('DF')
+    pickForSection('MF')
+    pickForSection('FW')
+    updateTeam(next)
+  }
+
+  function assignToSlot(playerId, sec, index) {
+    const next = players.map(p => ({ ...p }))
+    const i = next.findIndex(p => String(p.id) === String(playerId))
+    if (i === -1) return
+    const p = next[i]
+    if (p.section !== sec) return // enforce section match
+    // Enforce natural role for this slot
+    const slot = positions[sec][index]
+    if (slot && Array.isArray(slot.natural)) {
+      if (!slot.natural.includes(p.primaryRole)) return
+    }
+    // Determine if target occupied
+    const targetOccIdx = next.findIndex(x => x.slot && x.slot.section === sec && x.slot.index === index)
+    const fromSlot = p.slot ? { ...p.slot } : null
+    if (fromSlot && targetOccIdx !== -1) {
+      // Swap occupants between slots (same section)
+      const targetPlayer = next[targetOccIdx]
+      // Validate target player's natural fit in fromSlot
+      const fromSlotDef = positions[fromSlot.section][fromSlot.index]
+      if (fromSlotDef && Array.isArray(fromSlotDef.natural)) {
+        if (!fromSlotDef.natural.includes(targetPlayer.primaryRole)) {
+          return // cannot swap if target doesn't fit the original slot
+        }
+      }
+      targetPlayer.slot = { section: fromSlot.section, index: fromSlot.index }
+      targetPlayer.starting = true
+      p.slot = { section: sec, index }
+      p.starting = true
+    } else {
+      // Move player into target slot (clear target occupant if any)
+      if (targetOccIdx !== -1) {
+        next[targetOccIdx].slot = undefined
+        next[targetOccIdx].starting = false
+      }
+      // Clear previous slot of this player, if any
+      if (p.slot) {
+        p.slot = undefined
+      }
+      p.starting = true
+      p.slot = { section: sec, index }
     }
     updateTeam(next)
   }
 
-  function toggleStarter(id) {
-    const req = requiredCounts(formation)
+  function clearSlot(sec, index) {
     const next = players.map(p => ({ ...p }))
-    const idx = next.findIndex(p => p.id === id)
-    if (idx === -1) return
-    const p = next[idx]
-    const sec = p.section
-    const currentCount = next.filter(x => x.starting && x.section === sec).length
-    if (p.starting) {
-      p.starting = false
-    } else {
-      const limit = req[sec] + (sec === 'GK' ? 0 : 0)
-      if (sec === 'GK' && currentCount >= 1) return
-      if (sec !== 'GK' && currentCount >= req[sec]) return
-      p.starting = true
-    }
-    updateTeam(next)
+    const occIdx = next.findIndex(x => x.slot && x.slot.section === sec && x.slot.index === index)
+    if (occIdx !== -1) { next[occIdx].slot = undefined; next[occIdx].starting = false; updateTeam(next) }
   }
 
   function onChangeFormation(e) {
     const f = e.target.value
     setFormation(f)
-    // When changing formation, we keep current starters but enforce counts by trimming extras
-    const req = requiredCounts(f)
-    const next = players.map(p => ({ ...p }))
-    const bySec = { GK: [], DF: [], MF: [], FW: [] }
-    next.forEach(p => { if (p.starting) bySec[p.section].push(p) })
-    Object.keys(bySec).forEach(sec => {
-      if (sec === 'GK') { bySec[sec] = bySec[sec].slice(0, 1) }
-      else { bySec[sec] = bySec[sec].slice(0, req[sec]) }
-    })
-    const keepIds = new Set(Object.values(bySec).flat().map(p => p.id))
-    next.forEach(p => { p.starting = keepIds.has(p.id) })
+    // Remap starters to slots for new formation by section order
+    const next = players.map(p => ({ ...p, slot: p.slot ? { ...p.slot } : undefined }))
+    // capture current starters per section sorted by overall
+    const current = { GK: [], DF: [], MF: [], FW: [] }
+    next.forEach(p => { if (p.starting || p.slot) current[p.section].push(p) })
+    Object.keys(current).forEach(sec => current[sec].sort((a,b)=> b.overall - a.overall))
+    // clear all slots/starting
+    next.forEach(p => { p.slot = undefined; p.starting = false })
+    const slots = GAME_CONSTANTS.POSITION_ROLES[f]
+    const remap = (sec) => {
+      const list = current[sec]
+      const max = slots[sec].length
+      for (let i = 0; i < max && i < list.length; i++) {
+        const p = next.find(x => x.id === list[i].id)
+        if (p) { p.starting = true; p.slot = { section: sec, index: i } }
+      }
+    }
+    remap('GK'); remap('DF'); remap('MF'); remap('FW')
     updateTeam(next, f)
   }
 
@@ -121,14 +161,13 @@ export default function Squad() {
               <table>
                 <thead>
                   <tr>
-                    <th>Start</th><th>Name</th><th>Role</th><th>OVR</th><th>PAS</th><th>SHO</th><th>DEF</th><th>DRI</th><th>TAC</th>
+                    <th>Name</th><th>Role</th><th>OVR</th><th>PAS</th><th>SHO</th><th>DEF</th><th>DRI</th><th>TAC</th>
                   </tr>
                 </thead>
                 <tbody>
                   {players.filter(p => p.section === sec).map(p => (
-                    <tr key={p.id}>
-                      <td><input type="checkbox" checked={!!p.starting} onChange={() => toggleStarter(p.id)} /></td>
-                      <td>{p.name}</td>
+                    <tr key={p.id} draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', p.id) }} title="Trascina sul campo per schierare">
+                      <td>{p.name}{p.slot ? ' • XI' : ''}</td>
                       <td>{p.primaryRole}</td>
                       <td className="value" data-value={p.overall}>{p.overall}</td>
                       <td className="value">{p.stats.pass}</td>
@@ -146,7 +185,7 @@ export default function Squad() {
 
         {/* Right: field with DnD positions */}
         <div className="table-container">
-          <h3>Starting XI — drag players here</h3>
+          <h3>Starting XI — trascina i giocatori qui</h3>
           <div style={{
             position: 'relative',
             width: '100%',
@@ -158,33 +197,60 @@ export default function Squad() {
             {['FW','MF','DF','GK'].flatMap(sec => (
               positions[sec].map((pos, idx) => {
                 const slotKey = `${sec}-${idx}`
-                // find a starting player in this section for a simple mapping (not strict pos)
-                const candidate = starters.filter(p => p.section === sec)[idx]
+                const occupant = starters.find(p => p.slot && p.slot.section === sec && p.slot.index === idx)
+                const onDrop = (e) => {
+                  e.preventDefault()
+                  const id = e.dataTransfer.getData('text/plain')
+                  if (id) assignToSlot(id, sec, idx)
+                }
                 return (
-                  <div key={slotKey} style={{
-                    position: 'absolute',
-                    left: `${pos.x}%`,
-                    top: `${pos.y}%`,
-                    transform: 'translate(-50%, -50%)',
-                    width: 110,
-                  }}>
-                    <div style={{
-                      background: 'rgba(0,0,0,0.55)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 8,
-                      padding: 6,
-                      textAlign: 'center',
-                      color: 'white',
-                      fontSize: 12,
-                    }}>
-                      {candidate ? `${candidate.name} (${candidate.primaryRole})` : '—'}
+                  <div key={slotKey} style={{ position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)', width: 140 }}>
+                    <div
+                      onDragEnter={(e)=>{
+                        const id = e.dataTransfer.getData('text/plain')
+                        let valid = false
+                        if (id) {
+                          const pl = players.find(pp => String(pp.id) === String(id))
+                          const natural = positions[sec][idx]?.natural || []
+                          valid = !!pl && pl.section === sec && natural.includes(pl.primaryRole)
+                        }
+                        setHover({ sec, idx, valid })
+                      }}
+                      onDragOver={(e)=>{
+                        e.preventDefault()
+                        if (hover && hover.sec === sec && hover.idx === idx) {
+                          e.dataTransfer.dropEffect = hover.valid ? 'move' : 'none'
+                        }
+                      }}
+                      onDragLeave={()=>{
+                        if (hover && hover.sec === sec && hover.idx === idx) setHover(null)
+                      }}
+                      onDrop={(e)=>{ setHover(null); onDrop(e) }}
+                      className="card"
+                      style={{
+                        padding: 8,
+                        textAlign: 'center',
+                        background: occupant ? 'rgba(34,197,94,0.2)' : 'rgba(0,0,0,0.35)',
+                        borderStyle: occupant ? 'solid' : 'dashed',
+                        borderColor: hover && hover.sec === sec && hover.idx === idx ? (hover.valid ? 'var(--border)' : '#dc2626') : 'var(--border)'
+                      }}
+                    >
+                      {occupant ? (
+                        <div draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', occupant.id) }}>
+                          <div style={{ fontWeight: 700 }}>{occupant.name}</div>
+                          <div style={{ fontSize: 12, opacity: 0.9 }}>{occupant.primaryRole} · OVR {occupant.overall}</div>
+                          <button className="btn-warn" style={{ marginTop: 6, width: 'auto' }} onClick={()=>clearSlot(sec, idx)}>Rimuovi</button>
+                        </div>
+                      ) : (
+                        <div style={{ color: 'var(--muted)' }}>Trascina qui ({sec})</div>
+                      )}
                     </div>
                   </div>
                 )
               })
             ))}
           </div>
-          <p style={{ color: 'var(--muted)', marginTop: 8 }}>Nota: drag & drop completo può essere abilitato successivamente; ora le posizioni mostrano l’XI selezionato per sezione.</p>
+          <p style={{ color: 'var(--muted)', marginTop: 8 }}>Suggerimento: trascina un giocatore del roster sullo slot desiderato per assegnarlo. Puoi trascinare uno schierato su un altro slot per riposizionarlo.</p>
         </div>
       </div>
     </div>
