@@ -36,3 +36,8 @@ body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial
 	.roster-compact th,
 	.roster-compact td { padding: 2px 4px !important; line-height: 1.1; }
 	.roster-compact tbody tr { height: 22px; }
+
+/* Inline hint/reason text */
+.hint { color: var(--muted); font-size: 12px; margin-top: 4px; display: block; }
+.hint.warn { color: #b45309; }
+.hint.error { color: #b91c1c; }

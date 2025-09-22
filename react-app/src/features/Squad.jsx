@@ -3,6 +3,8 @@ import { useGameState } from '../state/GameStateContext'
 import { GAME_CONSTANTS } from '../constants'
 import fieldImg from '../../image/soccer.jpg'
 import { useMarket } from '../market/MarketContext'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { formatMoney } from '../utils/formatters'
 
 function roleSection(role) {
   if (role === 'GK') return 'GK'
@@ -43,6 +45,7 @@ export default function Squad() {
   const [hover, setHover] = useState(null) // { sec, idx, valid }
   const [message, setMessage] = useState(null) // transient error/info
   const [flash, setFlash] = useState(null) // { type: 'slot'|'bench', sec?, idx }
+  const [confirm, setConfirm] = useState({ open: false })
 
   const players = useMemo(() => (team?.players || []).map(p => ({ ...p, section: roleSection(p.primaryRole) })), [team])
   const starters = players.filter(p => p.starting || p.slot)
@@ -270,14 +273,18 @@ export default function Squad() {
                             <td style={{ textAlign: 'left', padding: '4px 6px' }}>
                               {(() => {
                                 const listed = team.finances?.playersForSale?.some(e => e.id === p.id)
+                                const money = (v) => formatMoney(v, { decimals: 2 })
                                 if (!listed) {
                                   const can = market.canListWithReason?.(team, p.id) || { ok: true }
                                   return (
-                                    <button title={can.ok ? '' : can.reason} disabled={!can.ok} onClick={() => { if (confirm(`List ${p.name} for sale at €${p.value.toFixed(2)}M?`)) market.listPlayer(p.id, p.value) }}>List</button>
+                                    <div>
+                                      <button title={can.ok ? '' : can.reason} disabled={!can.ok} onClick={() => setConfirm({ open: true, message: `List ${p.name} for sale at ${money(p.value)}?`, onConfirm: () => { market.listPlayer(p.id, p.value); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })}>List</button>
+                                      {!can.ok && <span className="hint error">{can.reason}</span>}
+                                    </div>
                                   )
                                 }
                                 return (
-                                  <button onClick={() => { if (confirm(`Unlist ${p.name} from sale?`)) market.unlistPlayer(p.id) }}>Unlist</button>
+                                  <button onClick={() => setConfirm({ open: true, message: `Unlist ${p.name} from sale?`, onConfirm: () => { market.unlistPlayer(p.id); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })}>Unlist</button>
                                 )
                               })()}
                             </td>
@@ -480,6 +487,7 @@ export default function Squad() {
           </div>
         </div>
       </div>
+      <ConfirmDialog open={!!confirm.open} message={confirm.message} onConfirm={confirm.onConfirm} onCancel={confirm.onCancel} />
     </div>
   )
 }

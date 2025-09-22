@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useGameState } from '../state/GameStateContext'
 import { useMarket } from '../market/MarketContext'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { formatMoney } from '../utils/formatters'
 
 function Section({ title, children }) {
   return (
@@ -15,6 +17,7 @@ export default function Market() {
   const { state } = useGameState()
   const market = useMarket()
   const [tab, setTab] = useState('freeAgents')
+  const [confirm, setConfirm] = useState({ open: false })
 
   useEffect(() => { market.initMarketIfNeeded() }, [])
 
@@ -48,15 +51,18 @@ export default function Market() {
                 const warn = market.wageWarning(myTeam, p.wage)
                 const disabled = !market.canAffordWage(myTeam, p.wage) || market.wouldExceedMaxOnBuy?.(myTeam, p)
                 const title = disabled ? (!market.canAffordWage(myTeam, p.wage) ? 'Wage budget exceeded' : 'Would exceed per-role max') : (warn ? 'Warning: near wage cap' : '')
+                const money = (v) => formatMoney(v, { decimals: 2 })
                 return (
                 <tr key={p.id}>
                   <td>{p.name}</td>
                   <td>{p.primaryRole}</td>
                   <td>{p.overall}</td>
                   <td>{p.age}</td>
-                  <td>€{(p.wage).toFixed(2)}</td>
+                  <td>{money(p.wage)}/wk</td>
                   <td>
-                    <button title={title} onClick={() => { if (confirm(`Bid for ${p.name} at wage €${p.wage.toFixed(2)}M/wk?`)) market.submitOfferForFreeAgent(p.id, p.wage) }} disabled={disabled}>Bid</button>
+                    <button title={title} onClick={() => setConfirm({ open: true, message: `Bid for ${p.name} at ${money(p.wage)}/wk?`, onConfirm: () => { market.submitOfferForFreeAgent(p.id, p.wage); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })} disabled={disabled}>Bid</button>
+                    {!disabled && warn && <span className="hint warn">Near wage cap</span>}
+                    {disabled && <span className="hint error">{title}</span>}
                   </td>
                 </tr>
               )})}
@@ -85,6 +91,7 @@ export default function Market() {
                 if (!player) return null
                 const check = market.canBuy(player, e.asking, myTeam)
                 const warn = market.wageWarning(myTeam, player.wage)
+                const money = (v) => formatMoney(v, { decimals: 2 })
                 return (
                   <tr key={`${e.team}-${e.playerId}`}>
                     <td>{player.name}</td>
@@ -92,9 +99,11 @@ export default function Market() {
                     <td>{player.overall}</td>
                     <td>{player.age}</td>
                     <td>{e.team}</td>
-                    <td>€{(e.asking).toFixed(2)}</td>
+                    <td>{money(e.asking)}</td>
                     <td>
-                      <button title={check.ok ? (warn ? 'Warning: near wage cap' : '') : check.reason} onClick={() => { if (confirm(`Bid €${e.asking.toFixed(2)}M + wage €${player.wage.toFixed(2)}M/wk for ${player.name}?`)) market.submitOfferForListed(player.id, e.team, e.asking, player.wage) }} disabled={!check.ok}>Bid</button>
+                      <button title={check.ok ? (warn ? 'Warning: near wage cap' : '') : check.reason} onClick={() => setConfirm({ open: true, message: `Bid ${money(e.asking)} + wage ${money(player.wage)}/wk for ${player.name}?`, onConfirm: () => { market.submitOfferForListed(player.id, e.team, e.asking, player.wage); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })} disabled={!check.ok}>Bid</button>
+                      {(!check.ok) && <span className="hint error">{check.reason}</span>}
+                      {(check.ok && warn) && <span className="hint warn">Near wage cap</span>}
                     </td>
                   </tr>
                 )
@@ -120,13 +129,14 @@ export default function Market() {
               {(myTeam.finances?.playersForSale || []).map((e) => {
                 const p = myTeam.players.find((pp) => pp.id === e.id)
                 if (!p) return null
+                const money = (v) => formatMoney(v, { decimals: 2 })
                 return (
                   <tr key={e.id}>
                     <td>{p.name}</td>
                     <td>{p.primaryRole}</td>
                     <td>{p.overall}</td>
-                    <td>€{(e.asking).toFixed(2)}</td>
-                    <td><button onClick={() => { if (confirm(`Remove ${p.name} from your transfer list?`)) market.unlistPlayer(e.id) }}>Remove</button></td>
+                    <td>{money(e.asking)}</td>
+                    <td><button onClick={() => setConfirm({ open: true, message: `Remove ${p.name} from your transfer list?`, onConfirm: () => { market.unlistPlayer(e.id); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })}>Remove</button></td>
                   </tr>
                 )
               })}
@@ -153,16 +163,17 @@ export default function Market() {
                 {(state.negotiations?.pendingOffers || []).filter(o => o.incoming && o.status === 'pending').map(o => {
                   const { player } = market.findPlayerById(o.playerId, state) || {}
                   if (!player) return null
+                  const money = (v) => formatMoney(v, { decimals: 2 })
                   return (
                     <tr key={o.id}>
                       <td>{player.name}</td>
                       <td>{o.buyer}</td>
-                      <td>€{o.amount.toFixed(2)}</td>
-                      <td>€{o.wage.toFixed(2)}</td>
+                      <td>{money(o.amount)}</td>
+                      <td>{money(o.wage)}/wk</td>
                       <td>Week {o.deadlineWeek}</td>
                       <td>
-                        <button onClick={() => { if (confirm(`Accept offer from ${o.buyer} for ${player.name} at €${o.amount.toFixed(2)}M + wage €${o.wage.toFixed(2)}M/wk?`)) market.acceptIncomingOffer(o.id) }}>Accept</button>
-                        <button onClick={() => { if (confirm(`Reject offer from ${o.buyer} for ${player.name}?`)) market.rejectIncomingOffer(o.id) }} style={{ marginLeft: 6 }}>Reject</button>
+                        <button onClick={() => setConfirm({ open: true, message: `Accept offer from ${o.buyer} for ${player.name} at ${money(o.amount)} + wage ${money(o.wage)}/wk?`, onConfirm: () => { market.acceptIncomingOffer(o.id); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })}>Accept</button>
+                        <button onClick={() => setConfirm({ open: true, message: `Reject offer from ${o.buyer} for ${player.name}?`, onConfirm: () => { market.rejectIncomingOffer(o.id); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })} style={{ marginLeft: 6 }}>Reject</button>
                       </td>
                     </tr>
                   )
@@ -187,14 +198,15 @@ export default function Market() {
                 {(state.negotiations?.pendingOffers || []).filter(o => o.buyer === state.teamName).map(o => {
                   const { player } = market.findPlayerById(o.playerId, state) || {}
                   if (!player) return null
+                  const money = (v) => formatMoney(v, { decimals: 2 })
                   return (
                     <tr key={o.id}>
                       <td>{player.name}</td>
                       <td>{o.seller || 'Free Agent'}</td>
-                      <td>{o.type === 'free' ? `W: €${o.wage.toFixed(2)}` : `F: €${o.amount.toFixed(2)}, W: €${o.wage.toFixed(2)}`}</td>
+                      <td>{o.type === 'free' ? `W: ${money(o.wage)}/wk` : `F: ${money(o.amount)}, W: ${money(o.wage)}/wk`}</td>
                       <td>{o.status}</td>
                       <td>Week {o.deadlineWeek}</td>
-                      <td>{o.status === 'pending' && <button onClick={() => { if (confirm('Cancel this offer?')) market.cancelOutgoingOffer(o.id) }}>Cancel</button>}</td>
+                      <td>{o.status === 'pending' && <button onClick={() => setConfirm({ open: true, message: 'Cancel this offer?', onConfirm: () => { market.cancelOutgoingOffer(o.id); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })}>Cancel</button>}</td>
                     </tr>
                   )
                 })}
@@ -203,6 +215,7 @@ export default function Market() {
           </Section>
         </>
       )}
+      <ConfirmDialog open={!!confirm.open} message={confirm.message} onConfirm={confirm.onConfirm} onCancel={confirm.onCancel} />
     </div>
   )
 }
