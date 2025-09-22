@@ -56,28 +56,18 @@ function AppShell() {
   const hasCareer = state?.teams?.length > 0
   return (
     <div style={{ padding: 16 }}>
-      <h1>Yuban Football Manager (React)</h1>
-      {!hasCareer && (
-        <div className="card" style={{ marginBottom: 12 }}>
-          <h3 style={{ marginTop: 0 }}>Welcome</h3>
-          {hasSaved ? (
-            <div className="row2">
-              <button className="btn-primary" onClick={confirmLoadSaved}>Load Saved Career</button>
-              <button className="btn-warn" onClick={confirmStartNew}>Start New Career</button>
-            </div>
-          ) : (
-            <div>
-              <p>No saved career found. Start a new one.</p>
-              <button className="btn-primary" onClick={confirmStartNew}>Continue</button>
-            </div>
-          )}
-        </div>
-      )}
-      <Tabs current={tab} onChange={setTab} />
       {!hasCareer ? (
-        <NewCareer />
+        <div className="center-screen">
+          <div>
+            <h1 className="app-title">Yuban Football Manager (React)</h1>
+            <h2 style={{ marginTop: 0 }}>Welcome</h2>
+            <NewCareer />
+          </div>
+        </div>
       ) : (
         <>
+          <h1>Yuban Football Manager (React)</h1>
+          <Tabs current={tab} onChange={setTab} />
           {tab === 'squad' && <Squad />}
           {tab === 'market' && <div>Market view coming soon…</div>}
           {tab === 'finance' && <div>Finance view coming soon…</div>}

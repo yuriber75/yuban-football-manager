@@ -6,7 +6,7 @@ export default function NewCareer() {
   const { setState, saveNow } = useGameState()
   const [manager, setManager] = useState('Manager')
   const [team, setTeam] = useState('My FC')
-  const [teamsCount, setTeamsCount] = useState(8)
+  const [teamsCount, setTeamsCount] = useState(16)
   // default formation is handled internally as 4-4-2
 
   function start() {
@@ -30,7 +30,7 @@ export default function NewCareer() {
       </div>
       <div style={{ marginTop: 10 }}>
         <label>League teams</label>
-        <input type="number" min={4} max={20} value={teamsCount} onChange={(e) => setTeamsCount(e.target.value)} />
+        <input type="number" min={8} max={20} value={teamsCount} onChange={(e) => setTeamsCount(e.target.value)} />
       </div>
       <div style={{ marginTop: 12 }}>
         <button className="btn-primary" onClick={start}>Start Career</button>

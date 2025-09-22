@@ -15,9 +15,9 @@ export function makePlayer(primaryRole = 'MC') {
   let posBase
   if (primaryRole === 'GK') {
     const gkStyles = [
-      { speed: 35, pass: 70, shot: 55, def: 75, freeKick: 40, penalty: 65 }, // modern GK
-      { speed: 40, pass: 50, shot: 50, def: 85, freeKick: 35, penalty: 70 }, // classic GK
-      { speed: 45, pass: 55, shot: 60, def: 80, freeKick: 45, penalty: 60 }, // athletic GK
+      { speed: 35, pass: 70, shot: 55, def: 75, freeKick: 40, penalty: 65, oneOnOne: 72, aerial: 68 }, // modern GK
+      { speed: 40, pass: 50, shot: 50, def: 85, freeKick: 35, penalty: 70, oneOnOne: 66, aerial: 74 }, // classic GK
+      { speed: 45, pass: 55, shot: 60, def: 80, freeKick: 45, penalty: 60, oneOnOne: 74, aerial: 66 }, // athletic GK
     ]
     posBase = gkStyles[Math.floor(Math.random() * gkStyles.length)]
   } else {
