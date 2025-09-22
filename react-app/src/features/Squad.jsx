@@ -222,10 +222,8 @@ export default function Squad() {
 
   return (
     <div className="card">
-      <div className="row2" style={{ alignItems: 'end' }}>
-        <div>
-          <h3 style={{ marginTop: 0 }}>{team.name} — Formation {formation}</h3>
-        </div>
+      {/* Title removed per request; keep only formation selector if needed */}
+      <div className="row2" style={{ alignItems: 'end', justifyContent: 'flex-end' }}>
         <div>
           <label>Formation</label>
           <select value={formation} onChange={onChangeFormation}>
@@ -240,7 +238,7 @@ export default function Squad() {
         <button className="btn-warn" onClick={clearStarters} style={{ width: 'auto' }}>Clear XI</button>
       </div>
 
-      <div className="row2" style={{ marginTop: 12 }}>
+  <div className="row2" style={{ marginTop: 12, flexWrap: 'nowrap', alignItems: 'flex-start' }}>
         {/* Left: roster grouped by roles */}
         <div className="table-container" style={{ flex: '0 0 60%' }}>
           <h3>Roster</h3>
