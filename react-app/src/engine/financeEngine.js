@@ -40,11 +40,13 @@ export function applyWeeklyFinances(state, weekResults) {
     perTeam[r.away] = { isHome: false, homeTeamWon }
   }
 
+  const breakdowns = {}
   const nextTeams = state.teams.map((team) => {
     const res = perTeam[team.name]
-    const { finances } = weeklyTeamFinances(team, res)
+    const { finances, breakdown } = weeklyTeamFinances(team, res)
+    breakdowns[team.name] = breakdown
     return { ...team, finances }
   })
 
-  return { ...state, teams: nextTeams }
+  return { nextState: { ...state, teams: nextTeams }, breakdowns }
 }

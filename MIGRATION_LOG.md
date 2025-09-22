@@ -24,3 +24,4 @@ Next steps:
 - Seeded team finance defaults in generator and hydration: `stadiumCapacity` and `attendance`.
 - Wired finance updates to run after weekly simulation in `MatchWeek.jsx`.
 - Fixed dev script: added `npm start` alias and updated `react-app/README.md` run instructions.
+ - Added post-week finance summary in Match tab for the manager’s team (gate, sponsor, wages, maintenance, net).
