@@ -26,3 +26,13 @@ body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial
 	.squad-layout { flex-direction: column; }
 	.col-roster, .col-field, .col-bench { flex: 0 0 auto !important; width: 100% !important; }
 }
+
+	/* Compact lists: used in Other Teams and My Team variants */
+	.compact-list { list-style: none; padding-left: 0; margin: 6px 0; }
+	.compact-list li { line-height: 1.1; margin: 2px 0; }
+	.two-columns { columns: 2; column-gap: 16px; }
+
+	/* Compact roster table */
+	.roster-compact th,
+	.roster-compact td { padding: 2px 4px !important; line-height: 1.1; }
+	.roster-compact tbody tr { height: 22px; }
