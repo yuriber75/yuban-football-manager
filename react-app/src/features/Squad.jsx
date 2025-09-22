@@ -306,9 +306,10 @@ export default function Squad() {
                   const id = e.dataTransfer.getData('text/plain')
                   if (id) assignToSlot(id, sec, idx)
                 }
-                const slotSize = 80
+                const slotWidth = 100
+                const slotHeight = Math.round(slotWidth * 1.5)
                 return (
-                  <div key={slotKey} style={{ position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)', width: slotSize }}>
+                  <div key={slotKey} style={{ position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)', width: slotWidth }}>
                     <div
                       onDragEnter={(e)=>{
                         const id = e.dataTransfer.getData('text/plain')
@@ -359,8 +360,8 @@ export default function Squad() {
                           if (hover && hover.sec === sec && hover.idx === idx) return (hover.valid ? (hover.oop ? '#dc2626' : 'var(--border)') : '#dc2626')
                           return 'var(--border)'
                         })(),
-                        width: slotSize,
-                        height: slotSize,
+                        width: slotWidth,
+                        height: slotHeight,
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
@@ -413,13 +414,13 @@ export default function Squad() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
             {Array.from({ length: 7 }).map((_, i) => {
               const bOcc = bench.find(p => p.benchIndex === i)
-              return (
+    return (
                 <div key={i}
                      className="card"
                      onDragOver={(e)=> e.preventDefault()}
                      onDrop={(e)=>{ const id = e.dataTransfer.getData('text/plain'); if (id) assignToBench(id, i) }}
                      onClick={() => { if (bOcc) clearBench(i) }}
-                     style={{ padding: 8, background: bOcc ? '#ffffff' : 'rgba(0,0,0,0.06)', borderColor: (flash && flash.type==='bench' && flash.idx===i) ? '#dc2626' : 'var(--border)', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: bOcc ? 'pointer' : 'default', boxShadow: bOcc ? '0 4px 10px rgba(0,0,0,0.12)' : undefined, borderWidth: bOcc ? 2 : 1, borderRadius: 10, borderStyle: 'solid' }}>
+      style={{ padding: 8, background: bOcc ? '#ffffff' : 'rgba(0,0,0,0.06)', borderColor: (flash && flash.type==='bench' && flash.idx===i) ? '#dc2626' : 'var(--border)', width: 80, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: bOcc ? 'pointer' : 'default', boxShadow: bOcc ? '0 4px 10px rgba(0,0,0,0.12)' : undefined, borderWidth: bOcc ? 2 : 1, borderRadius: 10, borderStyle: 'solid' }}>
                   {bOcc ? (
                     <div draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', bOcc.id) }}>
                       {(() => { const secTag = roleSection(bOcc.primaryRole); const acc = sectionAccent(secTag); return (
