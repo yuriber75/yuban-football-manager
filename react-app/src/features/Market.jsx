@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useGameState } from '../state/GameStateContext'
 import { useMarket } from '../market/MarketContext'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { formatMoney } from '../utils/formatters'
+import { formatMillions } from '../utils/formatters'
 
 function Section({ title, children }) {
   return (
@@ -18,6 +18,8 @@ export default function Market() {
   const market = useMarket()
   const [tab, setTab] = useState('freeAgents')
   const [confirm, setConfirm] = useState({ open: false })
+  const [faBid, setFaBid] = useState({}) // { [playerId]: { wage, len } }
+  const [tlBid, setTlBid] = useState({}) // { [playerId]: { fee, wage, len } }
 
   useEffect(() => { market.initMarketIfNeeded() }, [])
 
@@ -48,19 +50,26 @@ export default function Market() {
             </thead>
             <tbody>
               {state.freeAgents.map((p) => {
-                const warn = market.wageWarning(myTeam, p.wage)
-                const disabled = !market.canAffordWage(myTeam, p.wage) || market.wouldExceedMaxOnBuy?.(myTeam, p)
-                const title = disabled ? (!market.canAffordWage(myTeam, p.wage) ? 'Wage budget exceeded' : 'Would exceed per-role max') : (warn ? 'Warning: near wage cap' : '')
-                const money = (v) => formatMoney(v, { decimals: 2 })
+                const cfg = faBid[p.id] || { wage: p.wage, len: 2 }
+                const warn = market.wageWarning(myTeam, cfg.wage)
+                const disabled = !market.canAffordWage(myTeam, cfg.wage) || market.wouldExceedMaxOnBuy?.(myTeam, p)
+                const title = disabled ? (!market.canAffordWage(myTeam, cfg.wage) ? 'Wage budget exceeded' : 'Would exceed per-role max') : (warn ? 'Warning: near wage cap' : '')
+                const money = (v) => formatMillions(v, { decimals: 2 })
                 return (
                 <tr key={p.id}>
                   <td>{p.name}</td>
                   <td>{p.primaryRole}</td>
                   <td>{p.overall}</td>
                   <td>{p.age}</td>
-                  <td>{money(p.wage)}/wk</td>
                   <td>
-                    <button title={title} onClick={() => setConfirm({ open: true, message: `Bid for ${p.name} at ${money(p.wage)}/wk?`, onConfirm: () => { market.submitOfferForFreeAgent(p.id, p.wage); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })} disabled={disabled}>Bid</button>
+                    <input style={{ width: 70 }} type="number" min={GAME_CONSTANTS.FINANCE.WAGE_LIMITS.MIN_WEEKLY} step="0.01" value={cfg.wage}
+                      onChange={(e)=> setFaBid(prev => ({ ...prev, [p.id]: { ...(prev[p.id]||{}), wage: Number(e.target.value) || 0 } }))} /> M/wk
+                    <span style={{ marginLeft: 6 }}>Len</span>
+                    <input style={{ width: 46, marginLeft: 6 }} type="number" min={GAME_CONSTANTS.FINANCE.MIN_CONTRACT_LENGTH} max={GAME_CONSTANTS.FINANCE.MAX_CONTRACT_LENGTH} value={cfg.len}
+                      onChange={(e)=> setFaBid(prev => ({ ...prev, [p.id]: { ...(prev[p.id]||{}), len: Math.max(GAME_CONSTANTS.FINANCE.MIN_CONTRACT_LENGTH, Math.min(GAME_CONSTANTS.FINANCE.MAX_CONTRACT_LENGTH, Number(e.target.value)||2)) } }))} />
+                  </td>
+                  <td>
+                    <button title={title} onClick={() => setConfirm({ open: true, message: `Bid for ${p.name} at ${money(cfg.wage)}/wk for ${cfg.len}y?`, onConfirm: () => { market.submitOfferForFreeAgent(p.id, cfg.wage, cfg.len); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })} disabled={disabled}>Bid</button>
                     {!disabled && warn && <span className="hint warn">Near wage cap</span>}
                     {disabled && <span className="hint error">{title}</span>}
                   </td>
@@ -89,9 +98,10 @@ export default function Market() {
               {transferList.map((e) => {
                 const { player } = market.findPlayerById(e.playerId, state) || {}
                 if (!player) return null
-                const check = market.canBuy(player, e.asking, myTeam)
-                const warn = market.wageWarning(myTeam, player.wage)
-                const money = (v) => formatMoney(v, { decimals: 2 })
+                const cfg = tlBid[player.id] || { fee: e.asking, wage: player.wage, len: 3 }
+                const check = market.canBuy(player, cfg.fee, myTeam)
+                const warn = market.wageWarning(myTeam, cfg.wage)
+                const money = (v) => formatMillions(v, { decimals: 2 })
                 return (
                   <tr key={`${e.team}-${e.playerId}`}>
                     <td>{player.name}</td>
@@ -99,9 +109,20 @@ export default function Market() {
                     <td>{player.overall}</td>
                     <td>{player.age}</td>
                     <td>{e.team}</td>
-                    <td>{money(e.asking)}</td>
                     <td>
-                      <button title={check.ok ? (warn ? 'Warning: near wage cap' : '') : check.reason} onClick={() => setConfirm({ open: true, message: `Bid ${money(e.asking)} + wage ${money(player.wage)}/wk for ${player.name}?`, onConfirm: () => { market.submitOfferForListed(player.id, e.team, e.asking, player.wage); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })} disabled={!check.ok}>Bid</button>
+                      <input style={{ width: 70 }} type="number" min={GAME_CONSTANTS.FINANCE.MIN_TRANSFER_VALUE} step="0.01" value={cfg.fee}
+                        onChange={(e)=> setTlBid(prev => ({ ...prev, [player.id]: { ...(prev[player.id]||{}), fee: Number(e.target.value) || 0 } }))} /> M
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span>W:</span>
+                        <input style={{ width: 70 }} type="number" min={GAME_CONSTANTS.FINANCE.WAGE_LIMITS.MIN_WEEKLY} step="0.01" value={cfg.wage}
+                          onChange={(e)=> setTlBid(prev => ({ ...prev, [player.id]: { ...(prev[player.id]||{}), wage: Number(e.target.value) || 0 } }))} /> M/wk
+                        <span>Len</span>
+                        <input style={{ width: 46 }} type="number" min={GAME_CONSTANTS.FINANCE.MIN_CONTRACT_LENGTH} max={GAME_CONSTANTS.FINANCE.MAX_CONTRACT_LENGTH} value={cfg.len}
+                          onChange={(e)=> setTlBid(prev => ({ ...prev, [player.id]: { ...(prev[player.id]||{}), len: Math.max(GAME_CONSTANTS.FINANCE.MIN_CONTRACT_LENGTH, Math.min(GAME_CONSTANTS.FINANCE.MAX_CONTRACT_LENGTH, Number(e.target.value)||3)) } }))} />
+                        <button title={check.ok ? (warn ? 'Warning: near wage cap' : '') : check.reason} onClick={() => setConfirm({ open: true, message: `Bid ${money(cfg.fee)} + wage ${money(cfg.wage)}/wk for ${player.name} (${cfg.len}y)?`, onConfirm: () => { market.submitOfferForListed(player.id, e.team, cfg.fee, cfg.wage, cfg.len); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })} disabled={!check.ok}>Bid</button>
+                      </div>
                       {(!check.ok) && <span className="hint error">{check.reason}</span>}
                       {(check.ok && warn) && <span className="hint warn">Near wage cap</span>}
                     </td>
@@ -129,7 +150,7 @@ export default function Market() {
               {(myTeam.finances?.playersForSale || []).map((e) => {
                 const p = myTeam.players.find((pp) => pp.id === e.id)
                 if (!p) return null
-                const money = (v) => formatMoney(v, { decimals: 2 })
+                const money = (v) => formatMillions(v, { decimals: 2 })
                 return (
                   <tr key={e.id}>
                     <td>{p.name}</td>
@@ -163,7 +184,7 @@ export default function Market() {
                 {(state.negotiations?.pendingOffers || []).filter(o => o.incoming && o.status === 'pending').map(o => {
                   const { player } = market.findPlayerById(o.playerId, state) || {}
                   if (!player) return null
-                  const money = (v) => formatMoney(v, { decimals: 2 })
+                  const money = (v) => formatMillions(v, { decimals: 2 })
                   return (
                     <tr key={o.id}>
                       <td>{player.name}</td>
@@ -198,7 +219,7 @@ export default function Market() {
                 {(state.negotiations?.pendingOffers || []).filter(o => o.buyer === state.teamName).map(o => {
                   const { player } = market.findPlayerById(o.playerId, state) || {}
                   if (!player) return null
-                  const money = (v) => formatMoney(v, { decimals: 2 })
+                  const money = (v) => formatMillions(v, { decimals: 2 })
                   return (
                     <tr key={o.id}>
                       <td>{player.name}</td>

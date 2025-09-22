@@ -454,7 +454,7 @@ export function MarketProvider({ children }) {
       // Resolve per player: choose best offer and probabilistically accept
       byPlayer.forEach((offers, pid) => {
         const entry = offers[0]
-        if (entry.type === 'free') {
+  if (entry.type === 'free') {
           // player picks best wage/length
           offers.sort((a,b)=> (b.wage + b.contractLength*0.1) - (a.wage + a.contractLength*0.1))
           const best = offers[0]
@@ -464,11 +464,15 @@ export function MarketProvider({ children }) {
           if (buyerIdx < 0) return
           const buyer = ensureTeamMarketFinances(next.teams[buyerIdx])
           if (!canAffordWage(buyer, best.wage)) return
-          // Accept chance rises with wage vs player's wage
+          // Accept chance rises with wage vs player's baseline and contract length appropriateness by age
           const rel = (best.wage / Math.max(0.01, player.wage))
+          const agePref = (player.age <= 23 ? (best.contractLength >= 3 ? +0.08 : -0.04)
+                          : player.age <= 28 ? (best.contractLength >= 3 ? +0.05 : 0)
+                          : player.age <= 32 ? (best.contractLength >= 2 ? +0.02 : -0.02)
+                          : (best.contractLength >= 1 ? 0 : -0.05))
           // harder for stars, easier for average
           const starBias = player.overall >= 86 ? -0.1 : player.overall >= 80 ? -0.05 : player.overall <= 65 ? +0.05 : 0
-          const pAccept = Math.min(0.95, Math.max(0.05, 0.5 + (rel - (ranges.WAGES.PREFERRED || 1.0)) * 0.8 + starBias))
+          const pAccept = Math.min(0.96, Math.max(0.04, 0.48 + (rel - (ranges.WAGES.PREFERRED || 1.0)) * 0.85 + agePref + starBias))
           if (Math.random() < pAccept) {
             // finalize
             const nextFA = (next.freeAgents || []).filter(p => p.id !== pid)
@@ -478,8 +482,8 @@ export function MarketProvider({ children }) {
             pending = pending.map(o => o.playerId === pid ? { ...o, status: o.id === best.id ? 'accepted' : 'rejected' } : o)
           }
         } else {
-          // transfer: seller chooses best fee, modulated by wage attractiveness
-          offers.sort((a,b)=> (b.amount + b.wage*0.2) - (a.amount + a.wage*0.2))
+          // transfer: seller chooses best fee, modulated by wage attractiveness and contract length
+          offers.sort((a,b)=> (b.amount + b.wage*0.18 + b.contractLength*0.2) - (a.amount + a.wage*0.18 + a.contractLength*0.2))
           const best = offers[0]
           const sellerIdx = next.teams.findIndex(t => t.name === best.seller)
           const buyerIdx = next.teams.findIndex(t => t.name === best.buyer)
@@ -491,8 +495,12 @@ export function MarketProvider({ children }) {
           const askingEntry = (seller.finances.playersForSale || []).find(e => e.id === pid)
           const asking = askingEntry?.asking ?? player.value
           const feeRel = best.amount / Math.max(0.01, asking)
-          const starBias = player.overall >= 86 ? -0.1 : player.overall >= 80 ? -0.05 : player.overall <= 65 ? +0.05 : 0
-          const pAccept = Math.min(0.95, Math.max(0.05, 0.4 + (feeRel - (ranges.TRANSFER_FEE.PREFERRED || 1.0)) * 0.8 + starBias))
+          const agePref = (player.age <= 23 ? (best.contractLength >= 4 ? +0.05 : -0.03)
+                          : player.age <= 28 ? (best.contractLength >= 3 ? +0.03 : 0)
+                          : player.age <= 32 ? (best.contractLength >= 2 ? +0.01 : -0.01)
+                          : (best.contractLength >= 1 ? 0 : -0.02))
+          const starBias = player.overall >= 86 ? -0.08 : player.overall >= 80 ? -0.04 : player.overall <= 65 ? +0.05 : 0
+          const pAccept = Math.min(0.96, Math.max(0.04, 0.38 + (feeRel - (ranges.TRANSFER_FEE.PREFERRED || 1.0)) * 0.85 + agePref + starBias))
           const can = canBuy(player, best.amount, buyer)
           if (can.ok && Math.random() < pAccept) {
             const buyerFin = { ...buyer.finances, cash: Number(((buyer.finances.cash || 0) - best.amount).toFixed(GAME_CONSTANTS.FINANCE.DECIMAL_PLACES)) }

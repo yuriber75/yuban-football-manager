@@ -4,7 +4,7 @@ import { GAME_CONSTANTS } from '../constants'
 import fieldImg from '../../image/soccer.jpg'
 import { useMarket } from '../market/MarketContext'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { formatMoney } from '../utils/formatters'
+import { formatMillions } from '../utils/formatters'
 
 function roleSection(role) {
   if (role === 'GK') return 'GK'
@@ -273,7 +273,7 @@ export default function Squad() {
                             <td style={{ textAlign: 'left', padding: '4px 6px' }}>
                               {(() => {
                                 const listed = team.finances?.playersForSale?.some(e => e.id === p.id)
-                                const money = (v) => formatMoney(v, { decimals: 2 })
+                                const money = (v) => formatMillions(v, { decimals: 2 })
                                 if (!listed) {
                                   const can = market.canListWithReason?.(team, p.id) || { ok: true }
                                   return (

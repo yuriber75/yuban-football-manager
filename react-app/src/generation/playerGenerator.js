@@ -105,15 +105,43 @@ export function makePlayer(primaryRole = 'MC') {
     }
   }
 
-  const value = Math.max(
-    GAME_CONSTANTS.FINANCE.MIN_TRANSFER_VALUE,
-    Math.round((overall / 100) * GAME_CONSTANTS.FINANCE.BASE_VALUE_MULTIPLIER)
-  )
+  // Compute transfer value using OVR buckets and age multipliers (in Millions)
+  function bucketRange(ovr) {
+    if (ovr >= 92) return [56, 80]
+    if (ovr >= 89) return [41, 55]
+    if (ovr >= 86) return [31, 40]
+    if (ovr >= 83) return [26, 30]
+    if (ovr >= 80) return [21, 25] // matches vanilla example 21–25M
+    if (ovr >= 77) return [14, 18]
+    if (ovr >= 74) return [10, 14]
+    if (ovr >= 71) return [7, 10]
+    if (ovr >= 68) return [5, 7]   // matches vanilla example 5–7M
+    if (ovr >= 65) return [4, 6]
+    if (ovr >= 61) return [2, 4]
+    return [1, 3]
+  }
+  const [lo, hi] = bucketRange(overall)
+  let value = lo + Math.random() * (hi - lo)
+  // Age multiplier
+  const mult = (age < 23) ? GAME_CONSTANTS.FINANCE.TRANSFER_VALUE_MULTIPLIER.YOUNG_TALENT
+    : (age <= 28) ? GAME_CONSTANTS.FINANCE.TRANSFER_VALUE_MULTIPLIER.PRIME
+    : (age <= 32) ? GAME_CONSTANTS.FINANCE.TRANSFER_VALUE_MULTIPLIER.EXPERIENCED
+    : GAME_CONSTANTS.FINANCE.TRANSFER_VALUE_MULTIPLIER.VETERAN
+  value *= mult
+  if (age < 21) {
+    const bonusYears = 21 - age
+    value += bonusYears * (GAME_CONSTANTS.FINANCE.TRANSFER_VALUE_MULTIPLIER.YOUTH_BONUS || 0)
+  }
+  // Small role premium for GK/ST scarcity
+  if (primaryRole === 'ST' || primaryRole === 'GK') value *= 1.05
+  value = Math.min(GAME_CONSTANTS.FINANCE.MAX_TRANSFER_VALUE, Math.max(GAME_CONSTANTS.FINANCE.MIN_TRANSFER_VALUE, Number(value.toFixed(2))))
 
-  const wage = Math.max(
-    GAME_CONSTANTS.FINANCE.MIN_PLAYER_WAGE,
-    Number(((overall / 100) * GAME_CONSTANTS.FINANCE.BASE_WAGE_MULTIPLIER).toFixed(2))
-  )
+  // Wage baseline in M/wk; stars earn premium
+  let wage = (overall / 100) * GAME_CONSTANTS.FINANCE.BASE_WAGE_MULTIPLIER
+  if (overall >= 90) wage *= 1.4
+  else if (overall >= 85) wage *= 1.2
+  else if (overall <= 65) wage *= 0.9
+  wage = Math.max(GAME_CONSTANTS.FINANCE.MIN_PLAYER_WAGE, Number(wage.toFixed(2)))
 
   // Assign roles: primary plus optional secondary/tertiary per mapping
   // 30% chance for a second role; 10% for a third role (if available).
