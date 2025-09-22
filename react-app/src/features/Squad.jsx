@@ -22,6 +22,8 @@ export default function Squad() {
 
   const players = useMemo(() => (team?.players || []).map(p => ({ ...p, section: roleSection(p.primaryRole) })), [team])
   const starters = players.filter(p => p.starting)
+  const bench = players.filter(p => !p.starting)
+  const positions = GAME_CONSTANTS.POSITION_ROLES[formation]
 
   if (!team) return <div className="card">No team found. Start a career.</div>
 
@@ -109,38 +111,81 @@ export default function Squad() {
         <button className="btn-warn" onClick={clearStarters} style={{ width: 'auto' }}>Clear XI</button>
       </div>
 
-      <div className="table-container" style={{ marginTop: 12 }}>
-        <h3>Roster</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Start</th>
-              <th>Name</th>
-              <th>Role</th>
-              <th>OVR</th>
-              <th>PAS</th>
-              <th>SHO</th>
-              <th>DEF</th>
-              <th>DRI</th>
-              <th>TAC</th>
-            </tr>
-          </thead>
-          <tbody>
-            {players.map(p => (
-              <tr key={p.id}>
-                <td><input type="checkbox" checked={!!p.starting} onChange={() => toggleStarter(p.id)} /></td>
-                <td>{p.name}</td>
-                <td>{p.primaryRole}</td>
-                <td className="value" data-value={p.overall}>{p.overall}</td>
-                <td className="value">{p.stats.pass}</td>
-                <td className="value">{p.stats.shot}</td>
-                <td className="value">{p.stats.def}</td>
-                <td className="value">{p.stats.drib}</td>
-                <td className="value">{p.stats.tackle}</td>
-              </tr>
+      <div className="row2" style={{ marginTop: 12 }}>
+        {/* Left: roster grouped by roles */}
+        <div className="table-container">
+          <h3>Roster</h3>
+          {['GK','DF','MF','FW'].map(sec => (
+            <div key={sec} className="table-container" style={{ marginTop: 8 }}>
+              <h3>{sec}</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Start</th><th>Name</th><th>Role</th><th>OVR</th><th>PAS</th><th>SHO</th><th>DEF</th><th>DRI</th><th>TAC</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {players.filter(p => p.section === sec).map(p => (
+                    <tr key={p.id}>
+                      <td><input type="checkbox" checked={!!p.starting} onChange={() => toggleStarter(p.id)} /></td>
+                      <td>{p.name}</td>
+                      <td>{p.primaryRole}</td>
+                      <td className="value" data-value={p.overall}>{p.overall}</td>
+                      <td className="value">{p.stats.pass}</td>
+                      <td className="value">{p.stats.shot}</td>
+                      <td className="value">{p.stats.def}</td>
+                      <td className="value">{p.stats.drib}</td>
+                      <td className="value">{p.stats.tackle}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+
+        {/* Right: field with DnD positions */}
+        <div className="table-container">
+          <h3>Starting XI — drag players here</h3>
+          <div style={{
+            position: 'relative',
+            width: '100%',
+            paddingTop: '150%', // aspect ratio field
+            background: `url('/image/soccer.jpg') center/cover no-repeat`,
+            borderRadius: 12,
+            border: '1px solid var(--border)'
+          }}>
+            {['FW','MF','DF','GK'].flatMap(sec => (
+              positions[sec].map((pos, idx) => {
+                const slotKey = `${sec}-${idx}`
+                // find a starting player in this section for a simple mapping (not strict pos)
+                const candidate = starters.filter(p => p.section === sec)[idx]
+                return (
+                  <div key={slotKey} style={{
+                    position: 'absolute',
+                    left: `${pos.x}%`,
+                    top: `${pos.y}%`,
+                    transform: 'translate(-50%, -50%)',
+                    width: 110,
+                  }}>
+                    <div style={{
+                      background: 'rgba(0,0,0,0.55)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 8,
+                      padding: 6,
+                      textAlign: 'center',
+                      color: 'white',
+                      fontSize: 12,
+                    }}>
+                      {candidate ? `${candidate.name} (${candidate.primaryRole})` : '—'}
+                    </div>
+                  </div>
+                )
+              })
             ))}
-          </tbody>
-        </table>
+          </div>
+          <p style={{ color: 'var(--muted)', marginTop: 8 }}>Nota: drag & drop completo può essere abilitato successivamente; ora le posizioni mostrano l’XI selezionato per sezione.</p>
+        </div>
       </div>
     </div>
   )
