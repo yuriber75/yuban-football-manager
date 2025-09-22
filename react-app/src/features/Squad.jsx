@@ -192,8 +192,8 @@ export default function Squad() {
           <h3>Starting XI — drag players here</h3>
           <div style={{
             position: 'relative',
-            width: '100%',
-            paddingTop: '150%', // aspect ratio field
+            width: 700,
+            height: 1100,
             background: `url(${fieldImg}) center/cover no-repeat`,
             borderRadius: 12,
             border: '1px solid var(--border)'

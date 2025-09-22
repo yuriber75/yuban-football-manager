@@ -79,43 +79,64 @@ function hydrate(raw) {
 }
 
 export function GameStateProvider({ children }) {
-  const [state, setState] = useState(() => {
-    try {
-      const raw = localStorage.getItem(GAME_CONSTANTS.STORAGE.SAVE_KEY)
-      if (!raw) return defaultState
-      return hydrate(raw)
-    } catch (e) {
-      console.warn('Failed to load saved state, using defaults', e)
-      return defaultState
-    }
+  // Boot behavior: do NOT auto-load saved state; start with defaults.
+  const [state, setState] = useState(defaultState)
+  const [ready, setReady] = useState(false) // when true, allow saving
+  const [hasSaved, setHasSaved] = useState(() => {
+    try { return !!localStorage.getItem(GAME_CONSTANTS.STORAGE.SAVE_KEY) } catch { return false }
   })
 
   const saveRef = useRef(null)
 
-  // Persist to localStorage (debounced)
+  // Persist to localStorage (debounced) only after boot confirmation
   useEffect(() => {
+    if (!ready) return
     if (saveRef.current) clearTimeout(saveRef.current)
     saveRef.current = setTimeout(() => {
       try {
         localStorage.setItem(GAME_CONSTANTS.STORAGE.SAVE_KEY, serialize(state))
+        setHasSaved(true)
       } catch (e) {
         console.error('Failed to save state', e)
       }
     }, 50)
     return () => clearTimeout(saveRef.current)
-  }, [state])
+  }, [state, ready])
 
   const api = useMemo(() => ({
     state,
     setState,
     saveNow: () => {
-      try { localStorage.setItem(GAME_CONSTANTS.STORAGE.SAVE_KEY, serialize(state)) } catch {}
+      if (!ready) return
+      try { localStorage.setItem(GAME_CONSTANTS.STORAGE.SAVE_KEY, serialize(state)); setHasSaved(true) } catch {}
+    },
+    hasSaved,
+    confirmLoadSaved: () => {
+      try {
+        const raw = localStorage.getItem(GAME_CONSTANTS.STORAGE.SAVE_KEY)
+        if (raw) {
+          const hydrated = hydrate(raw)
+          setState(hydrated)
+        }
+        setReady(true)
+      } catch (e) {
+        console.warn('No saved state to load', e)
+        setReady(true)
+      }
+    },
+    confirmStartNew: () => {
+      // ensure we don't save defaults until user starts the new career; mark ready and clear stale save key
+      try { localStorage.removeItem(GAME_CONSTANTS.STORAGE.SAVE_KEY) } catch {}
+      setHasSaved(false)
+      setReady(true)
     },
     reset: () => {
       setState(defaultState)
       try { localStorage.removeItem(GAME_CONSTANTS.STORAGE.SAVE_KEY) } catch {}
+      setHasSaved(false)
+      setReady(false)
     },
-  }), [state])
+  }), [state, ready, hasSaved])
 
   return (
     <GameStateContext.Provider value={api}>{children}</GameStateContext.Provider>

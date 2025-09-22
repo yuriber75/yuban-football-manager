@@ -52,11 +52,27 @@ function LeagueTab() {
 
 function AppShell() {
   const [tab, setTab] = useState('squad')
-  const { state } = useGameState()
+  const { state, hasSaved, confirmLoadSaved, confirmStartNew } = useGameState()
   const hasCareer = state?.teams?.length > 0
   return (
     <div style={{ padding: 16 }}>
       <h1>Yuban Football Manager (React)</h1>
+      {!hasCareer && (
+        <div className="card" style={{ marginBottom: 12 }}>
+          <h3 style={{ marginTop: 0 }}>Welcome</h3>
+          {hasSaved ? (
+            <div className="row2">
+              <button className="btn-primary" onClick={confirmLoadSaved}>Load Saved Career</button>
+              <button className="btn-warn" onClick={confirmStartNew}>Start New Career</button>
+            </div>
+          ) : (
+            <div>
+              <p>No saved career found. Start a new one.</p>
+              <button className="btn-primary" onClick={confirmStartNew}>Continue</button>
+            </div>
+          )}
+        </div>
+      )}
       <Tabs current={tab} onChange={setTab} />
       {!hasCareer ? (
         <NewCareer />
