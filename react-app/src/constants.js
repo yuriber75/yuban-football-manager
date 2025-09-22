@@ -240,16 +240,47 @@ export const GAME_CONSTANTS = {
     MAX_PER_ROLE: { GK: 4, DEF: 9, MID: 9, ATT: 6 },
   },
   NAMES: {
-    FIRST: window.GAME_CONSTANTS?.NAMES?.FIRST || [],
-    LAST: window.GAME_CONSTANTS?.NAMES?.LAST || [],
+    FIRST: window.GAME_CONSTANTS?.NAMES?.FIRST || [
+      'Alex','Marco','Luca','Diego','Paolo','Andrea','Giovanni','Francesco','Matteo','Daniele',
+      'Simone','Nicola','Stefano','Fabio','Roberto','Federico','Giorgio','Riccardo','Michele','Alessio'
+    ],
+    LAST: window.GAME_CONSTANTS?.NAMES?.LAST || [
+      'Rossi','Russo','Ferrari','Esposito','Bianchi','Romano','Gallo','Costa','Fontana','Greco',
+      'Conti','De Luca','Marino','Giordano','Mancini','Lombardi','Moretti','Barbieri','Rizzo','Caruso'
+    ],
   },
   TEAMS: {
-    NAMES: window.GAME_CONSTANTS?.TEAMS?.NAMES || [],
+    NAMES: window.GAME_CONSTANTS?.TEAMS?.NAMES || [
+      'Torino United','Milano FC','Roma City','Napoli Stars','Firenze Lions','Bologna Eagles','Genova Mariners','Palermo Kings',
+      'Verona Knights','Parma Rangers','Cagliari Waves','Bari Falcons','Udine Wolves','Vicenza Royals','Perugia Titans','Modena Panthers'
+    ],
     FOREIGN_TEAMS: window.GAME_CONSTANTS?.TEAMS?.FOREIGN_TEAMS || [],
   },
   PLAYER_STATS: {
-    BASE_STATS: window.GAME_CONSTANTS?.PLAYER_STATS?.BASE_STATS || {},
-    WEIGHTS: window.GAME_CONSTANTS?.PLAYER_STATS?.WEIGHTS || {},
+    BASE_STATS: window.GAME_CONSTANTS?.PLAYER_STATS?.BASE_STATS || {
+      GK: { speed: 60, pass: 58, shot: 40, def: 70, drib: 45, tackle: 55 },
+      DC: { speed: 58, pass: 62, shot: 42, def: 70, drib: 50, tackle: 68 },
+      DR: { speed: 64, pass: 64, shot: 46, def: 64, drib: 58, tackle: 62 },
+      DL: { speed: 64, pass: 64, shot: 46, def: 64, drib: 58, tackle: 62 },
+      MC: { speed: 64, pass: 68, shot: 58, def: 60, drib: 64, tackle: 58 },
+      MR: { speed: 68, pass: 66, shot: 62, def: 56, drib: 68, tackle: 54 },
+      ML: { speed: 68, pass: 66, shot: 62, def: 56, drib: 68, tackle: 54 },
+      FR: { speed: 72, pass: 66, shot: 68, def: 48, drib: 70, tackle: 48 },
+      FL: { speed: 72, pass: 66, shot: 68, def: 48, drib: 70, tackle: 48 },
+      ST: { speed: 68, pass: 60, shot: 74, def: 46, drib: 66, tackle: 46 },
+    },
+    WEIGHTS: window.GAME_CONSTANTS?.PLAYER_STATS?.WEIGHTS || {
+      GK: { speed: 0.15, pass: 0.15, shot: 0.05, def: 0.35, drib: 0.1, tackle: 0.2 },
+      DC: { speed: 0.1, pass: 0.15, shot: 0.05, def: 0.4, drib: 0.1, tackle: 0.2 },
+      DR: { speed: 0.2, pass: 0.2, shot: 0.05, def: 0.25, drib: 0.2, tackle: 0.1 },
+      DL: { speed: 0.2, pass: 0.2, shot: 0.05, def: 0.25, drib: 0.2, tackle: 0.1 },
+      MC: { speed: 0.15, pass: 0.3, shot: 0.15, def: 0.15, drib: 0.15, tackle: 0.1 },
+      MR: { speed: 0.25, pass: 0.2, shot: 0.15, def: 0.1, drib: 0.25, tackle: 0.05 },
+      ML: { speed: 0.25, pass: 0.2, shot: 0.15, def: 0.1, drib: 0.25, tackle: 0.05 },
+      FR: { speed: 0.25, pass: 0.15, shot: 0.25, def: 0.05, drib: 0.25, tackle: 0.05 },
+      FL: { speed: 0.25, pass: 0.15, shot: 0.25, def: 0.05, drib: 0.25, tackle: 0.05 },
+      ST: { speed: 0.2, pass: 0.1, shot: 0.4, def: 0.05, drib: 0.2, tackle: 0.05 },
+    },
   },
   STORAGE: {
     SAVE_KEY: 'manager-sim-save-v2', // match vanilla app for backward compatibility

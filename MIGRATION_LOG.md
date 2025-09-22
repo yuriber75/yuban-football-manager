@@ -25,3 +25,7 @@ Next steps:
 - Wired finance updates to run after weekly simulation in `MatchWeek.jsx`.
 - Fixed dev script: added `npm start` alias and updated `react-app/README.md` run instructions.
  - Added post-week finance summary in Match tab for the manager’s team (gate, sponsor, wages, maintenance, net).
+
+## 2025-09-22 (cont. 3)
+- New Career UX: removed formation selection (defaults to 4-4-2) and aligned styling with legacy classes (`card`, `btn-primary`).
+- Integrated legacy CSS by importing `css/styles.css` into React entry; updated Tabs to use `.tab` styling.
