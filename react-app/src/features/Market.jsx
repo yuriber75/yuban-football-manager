@@ -27,6 +27,7 @@ export default function Market() {
         <button className={`tab ${tab === 'freeAgents' ? 'active' : ''}`} onClick={() => setTab('freeAgents')}>Free Agents</button>
         <button className={`tab ${tab === 'transfer' ? 'active' : ''}`} onClick={() => setTab('transfer')}>Transfer List</button>
         <button className={`tab ${tab === 'mylisted' ? 'active' : ''}`} onClick={() => setTab('mylisted')}>My Listed</button>
+        <button className={`tab ${tab === 'offers' ? 'active' : ''}`} onClick={() => setTab('offers')}>Offers</button>
       </div>
 
       {tab === 'freeAgents' && (
@@ -51,7 +52,7 @@ export default function Market() {
                   <td>{p.age}</td>
                   <td>€{(p.wage).toFixed(2)}</td>
                   <td>
-                    <button onClick={() => market.signFreeAgent(p.id)} disabled={!market.canAffordWage(myTeam, p.wage)}>Sign</button>
+                    <button onClick={() => market.submitOfferForFreeAgent(p.id, p.wage)} disabled={!market.canAffordWage(myTeam, p.wage)}>Bid</button>
                   </td>
                 </tr>
               ))}
@@ -87,7 +88,7 @@ export default function Market() {
                     <td>{e.team}</td>
                     <td>€{(e.asking).toFixed(2)}</td>
                     <td>
-                      <button onClick={() => market.buyListedPlayer(player.id)} disabled={!market.canBuy(player, e.asking, myTeam).ok}>Buy</button>
+                      <button onClick={() => market.submitOfferForListed(player.id, e.team, e.asking, player.wage)} disabled={!market.canBuy(player, e.asking, myTeam).ok}>Bid</button>
                     </td>
                   </tr>
                 )
@@ -126,6 +127,75 @@ export default function Market() {
             </tbody>
           </table>
         </Section>
+      )}
+
+      {tab === 'offers' && (
+        <>
+          <Section title="Incoming Offers">
+            <table className="roster-table roster-compact">
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>From</th>
+                  <th>Fee (M)</th>
+                  <th>Wage (M/wk)</th>
+                  <th>Deadline</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {(state.negotiations?.pendingOffers || []).filter(o => o.incoming && o.status === 'pending').map(o => {
+                  const { player } = market.findPlayerById(o.playerId, state) || {}
+                  if (!player) return null
+                  return (
+                    <tr key={o.id}>
+                      <td>{player.name}</td>
+                      <td>{o.buyer}</td>
+                      <td>€{o.amount.toFixed(2)}</td>
+                      <td>€{o.wage.toFixed(2)}</td>
+                      <td>Week {o.deadlineWeek}</td>
+                      <td>
+                        <button onClick={() => market.acceptIncomingOffer(o.id)}>Accept</button>
+                        <button onClick={() => market.rejectIncomingOffer(o.id)} style={{ marginLeft: 6 }}>Reject</button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </Section>
+
+          <Section title="My Outgoing Offers">
+            <table className="roster-table roster-compact">
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>To</th>
+                  <th>Fee/Wage</th>
+                  <th>Status</th>
+                  <th>Deadline</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {(state.negotiations?.pendingOffers || []).filter(o => o.buyer === state.teamName).map(o => {
+                  const { player } = market.findPlayerById(o.playerId, state) || {}
+                  if (!player) return null
+                  return (
+                    <tr key={o.id}>
+                      <td>{player.name}</td>
+                      <td>{o.seller || 'Free Agent'}</td>
+                      <td>{o.type === 'free' ? `W: €${o.wage.toFixed(2)}` : `F: €${o.amount.toFixed(2)}, W: €${o.wage.toFixed(2)}`}</td>
+                      <td>{o.status}</td>
+                      <td>Week {o.deadlineWeek}</td>
+                      <td>{o.status === 'pending' && <button onClick={() => market.cancelOutgoingOffer(o.id)}>Cancel</button>}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </Section>
+        </>
       )}
     </div>
   )

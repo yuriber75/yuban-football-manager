@@ -15,8 +15,9 @@ export default function MatchWeek() {
     const { nextState, weekResults } = simulateWeek(state)
     const { nextState: withFinances, breakdowns } = applyWeeklyFinances(nextState, weekResults)
     setState(withFinances)
-    // Process simple weekly market logic
-    market.processWeeklyMarket()
+  // Process weekly market logic and resolve negotiations
+  market.processWeeklyMarket()
+  market.resolveNegotiations()
     const myName = state.teamName
     if (breakdowns && breakdowns[myName]) {
       const b = breakdowns[myName]

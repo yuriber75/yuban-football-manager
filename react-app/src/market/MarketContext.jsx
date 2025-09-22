@@ -117,6 +117,114 @@ export function MarketProvider({ children }) {
     return { ok: true }
   }
 
+  // Negotiations: offers structure
+  // { id, playerId, seller, buyer, type: 'transfer'|'free', amount, wage, contractLength, team: buyerName, deadlineWeek, status: 'pending'|'accepted'|'rejected'|'expired', incoming?: boolean, requiresDecision?: boolean }
+
+  function ensureNegotiations(s) {
+    const neg = s.negotiations || { pendingOffers: [], rejectedPlayers: new Set(), attemptsCount: {} }
+    if (!Array.isArray(neg.pendingOffers)) neg.pendingOffers = []
+    return neg
+  }
+
+  function submitOfferForListed(playerId, sellerName, amount, wage, contractLength = 3) {
+    setState((s) => {
+      const buyerName = s.teamName
+      const myIdx = getMyTeamIndex(s)
+      if (myIdx < 0) return s
+      const { player } = findPlayerById(playerId, s)
+      if (!player) return s
+      const neg = ensureNegotiations(s)
+      const id = crypto.randomUUID?.() || Math.random().toString(36).slice(2)
+      const offer = { id, playerId, seller: sellerName, buyer: buyerName, type: 'transfer', amount: Number(amount.toFixed(2)), wage: Number(wage.toFixed(2)), contractLength, team: buyerName, deadlineWeek: s.league.week + 1, status: 'pending' }
+      const pendingOffers = [...neg.pendingOffers, offer]
+      return { ...s, negotiations: { ...neg, pendingOffers } }
+    })
+    saveNow()
+  }
+
+  function generateCompetingOffers(playerId, sellerName) {
+    const offers = []
+    const s = state
+    const teams = (s.teams || []).map(t => t.name)
+    const pool = teams.filter(n => n !== s.teamName && n !== sellerName)
+    const max = Math.min(2, pool.length)
+    const { player } = findPlayerById(playerId, s)
+    if (!player) return offers
+    for (let i = 0; i < max; i++) {
+      const idx = Math.floor(Math.random() * pool.length)
+      const buyer = pool.splice(idx, 1)[0]
+      const amountVar = 0.9 + Math.random() * 0.3 // 0.9..1.2 × value as proxy
+      const wageVar = 0.9 + Math.random() * 0.3
+      offers.push({ id: (crypto.randomUUID?.() || Math.random().toString(36).slice(2)), playerId, seller: sellerName, buyer, type: 'transfer', amount: Number((player.value * amountVar).toFixed(2)), wage: Number((player.wage * wageVar).toFixed(2)), contractLength: 2 + Math.floor(Math.random() * 3), team: buyer, deadlineWeek: s.league.week + 1, status: 'pending', ai: true })
+    }
+    return offers
+  }
+
+  function submitOfferForFreeAgent(playerId, wage, contractLength = 2) {
+    setState((s) => {
+      const buyerName = s.teamName
+      const player = (s.freeAgents || []).find(p => p.id === playerId)
+      if (!player) return s
+      const neg = ensureNegotiations(s)
+      const id = crypto.randomUUID?.() || Math.random().toString(36).slice(2)
+      const offer = { id, playerId, seller: null, buyer: buyerName, type: 'free', amount: 0, wage: Number(wage.toFixed(2)), contractLength, team: buyerName, deadlineWeek: s.league.week + 1, status: 'pending' }
+      const pendingOffers = [...neg.pendingOffers, offer]
+      return { ...s, negotiations: { ...neg, pendingOffers } }
+    })
+    saveNow()
+  }
+
+  function acceptIncomingOffer(offerId) {
+    setState((s) => {
+      const neg = ensureNegotiations(s)
+      const offer = neg.pendingOffers.find(o => o.id === offerId && o.incoming && o.status === 'pending')
+      if (!offer) return s
+      // finalize transfer: user is seller
+      const sellerIdx = s.teams.findIndex(t => t.name === offer.seller)
+      const buyerIdx = s.teams.findIndex(t => t.name === offer.buyer)
+      if (sellerIdx < 0 || buyerIdx < 0) return s
+      const seller = ensureTeamMarketFinances(s.teams[sellerIdx])
+      const buyer = ensureTeamMarketFinances(s.teams[buyerIdx])
+      const player = seller.players.find(p => p.id === offer.playerId)
+      if (!player) return s
+      const check = canBuy(player, offer.amount, buyer)
+      if (!check.ok) {
+        // mark rejected due to affordability
+        const pendingOffers = neg.pendingOffers.map(o => o.id === offerId ? { ...o, status: 'rejected' } : o)
+        return { ...s, negotiations: { ...neg, pendingOffers } }
+      }
+      const buyerFin = { ...buyer.finances, cash: Number(((buyer.finances.cash || 0) - offer.amount).toFixed(GAME_CONSTANTS.FINANCE.DECIMAL_PLACES)) }
+      const sellerFin = { ...seller.finances, cash: Number(((seller.finances.cash || 0) + offer.amount).toFixed(GAME_CONSTANTS.FINANCE.DECIMAL_PLACES)) }
+      const nextSellerPlayers = seller.players.filter(pp => pp.id !== offer.playerId)
+      const nextBuyerPlayers = [...buyer.players, { ...player, starting: false }]
+      const nextSellerListings = seller.finances.playersForSale.filter(e => e.id !== offer.playerId)
+      const teams = [...s.teams]
+      teams[sellerIdx] = { ...seller, finances: { ...sellerFin, playersForSale: nextSellerListings }, players: nextSellerPlayers }
+      teams[buyerIdx] = { ...buyer, finances: buyerFin, players: nextBuyerPlayers }
+      const pendingOffers = neg.pendingOffers.map(o => o.id === offerId ? { ...o, status: 'accepted' } : o).filter(o => o.playerId !== offer.playerId || o.status !== 'pending')
+      return { ...s, teams, negotiations: { ...neg, pendingOffers } }
+    })
+    saveNow()
+  }
+
+  function rejectIncomingOffer(offerId) {
+    setState((s) => {
+      const neg = ensureNegotiations(s)
+      const pendingOffers = neg.pendingOffers.map(o => o.id === offerId ? { ...o, status: 'rejected' } : o)
+      return { ...s, negotiations: { ...neg, pendingOffers } }
+    })
+    saveNow()
+  }
+
+  function cancelOutgoingOffer(offerId) {
+    setState((s) => {
+      const neg = ensureNegotiations(s)
+      const pendingOffers = neg.pendingOffers.filter(o => o.id !== offerId)
+      return { ...s, negotiations: { ...neg, pendingOffers } }
+    })
+    saveNow()
+  }
+
   function signFreeAgent(playerId) {
     setState((s) => {
       const idxMy = getMyTeamIndex(s)
@@ -210,7 +318,108 @@ export function MarketProvider({ children }) {
         const extra = Array.from({ length: add }, () => makePlayer(roles[Math.floor(Math.random() * roles.length)]))
         return { ...s, freeAgents: [...s.freeAgents, ...extra] }
       }
+      // Chance to create incoming AI offers for user's listed players
+      const my = s.teamName
+      const meIdx = s.teams.findIndex(t => t.name === my)
+      if (meIdx >= 0) {
+        const me = ensureTeamMarketFinances(s.teams[meIdx])
+        const myListed = me.finances.playersForSale || []
+        if (myListed.length && Math.random() < 0.4) {
+          const pick = myListed[Math.floor(Math.random() * myListed.length)]
+          const others = s.teams.filter(t => t.name !== my).map(t => t.name)
+          if (others.length) {
+            const buyer = others[Math.floor(Math.random() * others.length)]
+            const { player } = findPlayerById(pick.id, s)
+            if (player) {
+              const amount = Number((pick.asking * (0.9 + Math.random() * 0.2)).toFixed(2))
+              const wage = Number((player.wage * (0.95 + Math.random() * 0.2)).toFixed(2))
+              const offer = { id: (crypto.randomUUID?.() || Math.random().toString(36).slice(2)), playerId: pick.id, seller: my, buyer, type: 'transfer', amount, wage, contractLength: 2 + Math.floor(Math.random() * 3), team: buyer, deadlineWeek: s.league.week + 1, status: 'pending', incoming: true, requiresDecision: true }
+              const neg = ensureNegotiations(s)
+              const pendingOffers = [...neg.pendingOffers, offer]
+              return { ...s, negotiations: { ...neg, pendingOffers } }
+            }
+          }
+        }
+      }
       return s
+    })
+    saveNow()
+  }
+
+  function resolveNegotiations() {
+    setState((s) => {
+      const neg = ensureNegotiations(s)
+      if (!neg.pendingOffers.length) return s
+      const week = s.league.week
+      // Group offers by player
+      const byPlayer = new Map()
+      for (const o of neg.pendingOffers) {
+        if (o.status !== 'pending') continue
+        if (o.incoming && o.requiresDecision) continue // wait for user
+        const key = o.playerId
+        if (!byPlayer.has(key)) byPlayer.set(key, [])
+        byPlayer.get(key).push(o)
+      }
+      let next = { ...s }
+      let pending = [...neg.pendingOffers]
+      const ranges = GAME_CONSTANTS.FINANCE.NEGOTIATION_RANGES
+      // Resolve per player: choose best offer and probabilistically accept
+      byPlayer.forEach((offers, pid) => {
+        const entry = offers[0]
+        if (entry.type === 'free') {
+          // player picks best wage/length
+          offers.sort((a,b)=> (b.wage + b.contractLength*0.1) - (a.wage + a.contractLength*0.1))
+          const best = offers[0]
+          const { player } = findPlayerById(pid, next) || {}
+          if (!player) return
+          const buyerIdx = next.teams.findIndex(t => t.name === best.buyer)
+          if (buyerIdx < 0) return
+          const buyer = ensureTeamMarketFinances(next.teams[buyerIdx])
+          if (!canAffordWage(buyer, best.wage)) return
+          // Accept chance rises with wage vs player's wage
+          const rel = (best.wage / Math.max(0.01, player.wage))
+          const pAccept = Math.min(0.95, 0.5 + (rel - ranges.WAGES.PREFERRED) * 0.8)
+          if (Math.random() < pAccept) {
+            // finalize
+            const nextFA = (next.freeAgents || []).filter(p => p.id !== pid)
+            const nextBuyer = { ...buyer, players: [...buyer.players, { ...player, starting: false, wage: best.wage }] }
+            const teams = [...next.teams]; teams[buyerIdx] = nextBuyer
+            next = { ...next, teams, freeAgents: nextFA }
+            pending = pending.map(o => o.playerId === pid ? { ...o, status: o.id === best.id ? 'accepted' : 'rejected' } : o)
+          }
+        } else {
+          // transfer: seller chooses best fee, modulated by wage attractiveness
+          offers.sort((a,b)=> (b.amount + b.wage*0.2) - (a.amount + a.wage*0.2))
+          const best = offers[0]
+          const sellerIdx = next.teams.findIndex(t => t.name === best.seller)
+          const buyerIdx = next.teams.findIndex(t => t.name === best.buyer)
+          if (sellerIdx < 0 || buyerIdx < 0) return
+          const seller = ensureTeamMarketFinances(next.teams[sellerIdx])
+          const buyer = ensureTeamMarketFinances(next.teams[buyerIdx])
+          const player = seller.players.find(p => p.id === pid)
+          if (!player) return
+          const askingEntry = (seller.finances.playersForSale || []).find(e => e.id === pid)
+          const asking = askingEntry?.asking ?? player.value
+          const feeRel = best.amount / Math.max(0.01, asking)
+          const pAccept = Math.min(0.95, 0.4 + (feeRel - ranges.TRANSFER_FEE.PREFERRED) * 0.8)
+          const can = canBuy(player, best.amount, buyer)
+          if (can.ok && Math.random() < pAccept) {
+            const buyerFin = { ...buyer.finances, cash: Number(((buyer.finances.cash || 0) - best.amount).toFixed(GAME_CONSTANTS.FINANCE.DECIMAL_PLACES)) }
+            const sellerFin = { ...seller.finances, cash: Number(((seller.finances.cash || 0) + best.amount).toFixed(GAME_CONSTANTS.FINANCE.DECIMAL_PLACES)) }
+            const nextSellerPlayers = seller.players.filter(pp => pp.id !== pid)
+            const nextBuyerPlayers = [...buyer.players, { ...player, starting: false, wage: best.wage }]
+            const nextSellerListings = seller.finances.playersForSale.filter(e => e.id !== pid)
+            const teams = [...next.teams]
+            teams[sellerIdx] = { ...seller, finances: { ...sellerFin, playersForSale: nextSellerListings }, players: nextSellerPlayers }
+            teams[buyerIdx] = { ...buyer, finances: buyerFin, players: nextBuyerPlayers }
+            next = { ...next, teams }
+            pending = pending.map(o => o.playerId === pid ? { ...o, status: o.id === best.id ? 'accepted' : 'rejected' } : o)
+          }
+        }
+      })
+      // Decrement deadlines and expire
+      pending = pending.map(o => (o.status === 'pending' && o.deadlineWeek <= week) ? { ...o, status: 'expired' } : o)
+      return { ...next, negotiations: { ...neg, pendingOffers: pending } }
     })
     saveNow()
   }
@@ -227,7 +436,14 @@ export function MarketProvider({ children }) {
     listPlayer,
     unlistPlayer,
     buyListedPlayer,
+    submitOfferForListed,
+    generateCompetingOffers,
+    submitOfferForFreeAgent,
+    acceptIncomingOffer,
+    rejectIncomingOffer,
+    cancelOutgoingOffer,
     processWeeklyMarket,
+    resolveNegotiations,
   }), [state])
 
   return <MarketContext.Provider value={api}>{children}</MarketContext.Provider>
