@@ -228,9 +228,9 @@ export default function Squad() {
         </div>
       </div>
 
-  <div className="row2" style={{ marginTop: 12, flexWrap: 'nowrap' }}>
+  <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'nowrap', alignItems: 'flex-start' }}>
         {/* Left: roster grouped by roles */}
-        <div className="table-container" style={{ flex: '0 0 60%' }}>
+  <div className="table-container" style={{ flex: '0 0 60%', minWidth: 0 }}>
           <h3>Roster</h3>
           {['GK','DF','MF','FW'].map(sec => (
             <div key={sec} className="table-container" style={{ marginTop: 8 }}>
@@ -286,12 +286,13 @@ export default function Squad() {
         </div>
 
         {/* Middle: field with DnD positions */}
-        <div className="table-container" style={{ flex: '0 0 30%' }}>
+  <div className="table-container" style={{ flex: '0 0 30%', minWidth: 0 }}>
           <h3>Starting XI — drag players here</h3>
           <div style={{
             position: 'relative',
-            width: 640,
-            height: 1000,
+            width: '100%',
+            maxWidth: 640,
+            aspectRatio: '0.64',
             background: `url(${fieldImg}) center/cover no-repeat`,
             borderRadius: 12,
             border: '1px solid var(--border)'
@@ -408,7 +409,7 @@ export default function Squad() {
         </div>
 
         {/* Right: bench (7 slots) */}
-        <div className="table-container" style={{ flex: '0 0 10%' }}>
+  <div className="table-container" style={{ flex: '0 0 10%', minWidth: 0 }}>
           <h3>Bench (7)</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
             {Array.from({ length: 7 }).map((_, i) => {
