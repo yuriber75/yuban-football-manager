@@ -4,6 +4,10 @@ function randomBetween(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n))
+}
+
 function weightedAverage(stats, weights) {
   return Math.round(
     Object.keys(weights).reduce((sum, key) => sum + stats[key] * weights[key], 0)
@@ -31,9 +35,13 @@ export function makePlayer(primaryRole = 'MC') {
 
   // Generate stats for all weighted keys to ensure overall is valid
   const stats = {}
+  // Wider spread to allow higher-ceiling players and clamp to [55, 90]
+  const SPREAD = 15
   for (const key of Object.keys(posWeights)) {
     const base = typeof posBase[key] === 'number' ? posBase[key] : 55
-    stats[key] = randomBetween(base - 8, base + 8)
+    const lo = Math.max(55, base - SPREAD)
+    const hi = Math.min(90, base + SPREAD)
+    stats[key] = clamp(randomBetween(lo, hi), 55, 90)
   }
 
   const overall = weightedAverage(stats, posWeights)
