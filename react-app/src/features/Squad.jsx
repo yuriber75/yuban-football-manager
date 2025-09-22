@@ -82,8 +82,21 @@ export default function Squad() {
     const i = next.findIndex(p => String(p.id) === String(playerId))
     if (i === -1) return
     const p = next[i]
-    // Enforce section only; allow out-of-position with red border indicator
-    if (p.section !== sec) return
+    // GK strict rule: cannot place GK outside GK slot → flash + message
+    if (p.primaryRole === 'GK' && sec !== 'GK') {
+      setFlash({ type: 'slot', sec, idx: index })
+      setMessage('Goalkeepers can only be placed in the Goalkeeper slot.')
+      setTimeout(() => { setFlash(null); setMessage(null) }, 1200)
+      return
+    }
+    // GK slot can only accept GK
+    if (sec === 'GK' && p.primaryRole !== 'GK') {
+      setFlash({ type: 'slot', sec, idx: index })
+      setMessage('Only a Goalkeeper can be placed in the Goalkeeper slot.')
+      setTimeout(() => { setFlash(null); setMessage(null) }, 1200)
+      return
+    }
+    // Allow cross-department placement among DF/MF/FW; apply OOP penalty via naturals check
   const slot = positions[sec][index]
   const isOOP = Array.isArray(slot?.natural) ? !slot.natural.includes(p.primaryRole) : false
   const penalty = isOOP ? 0.9 : 1
@@ -218,15 +231,34 @@ export default function Squad() {
 
       <div className="row2" style={{ marginTop: 12 }}>
         {/* Left: roster grouped by roles */}
-        <div className="table-container" style={{ flex: '1 1 25%' }}>
+        <div className="table-container" style={{ flex: '0 0 60%' }}>
           <h3>Roster</h3>
           {['GK','DF','MF','FW'].map(sec => (
             <div key={sec} className="table-container" style={{ marginTop: 8 }}>
-              <h3>{sec}</h3>
+              <h3 style={{ textAlign: 'center', fontSize: '130%' }}>
+                {sec === 'GK' ? 'Goalkeeper' : sec === 'DF' ? 'Defenders' : sec === 'MF' ? 'Midfielders' : 'Forwards'}
+              </h3>
               <table>
+                <colgroup>
+                  <col style={{ width: 220 }} />
+                  <col style={{ width: 70 }} />
+                  <col style={{ width: 56 }} />
+                  <col style={{ width: 56 }} />
+                  <col style={{ width: 56 }} />
+                  <col style={{ width: 56 }} />
+                  <col style={{ width: 56 }} />
+                  <col style={{ width: 56 }} />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th>Name</th><th>Role</th><th>OVR</th><th>PAS</th><th>SHO</th><th>DEF</th><th>DRI</th><th>TAC</th>
+                    <th style={{ textAlign: 'left' }}>Name</th>
+                    <th style={{ textAlign: 'left' }}>Role</th>
+                    <th style={{ textAlign: 'left' }}>OVR</th>
+                    <th style={{ textAlign: 'left' }}>PAS</th>
+                    <th style={{ textAlign: 'left' }}>SHO</th>
+                    <th style={{ textAlign: 'left' }}>DEF</th>
+                    <th style={{ textAlign: 'left' }}>DRI</th>
+                    <th style={{ textAlign: 'left' }}>TAC</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -235,15 +267,15 @@ export default function Squad() {
                         draggable
                         onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', p.id) }}
                         title="Drag to field or bench"
-                        style={{ background: p.slot ? 'rgba(34,197,94,0.15)' : (p.benchIndex !== undefined ? 'rgba(239,68,68,0.12)' : undefined) }}>
-                      <td>#{p.number} {p.name}</td>
-                      <td>{p.primaryRole}</td>
-                      <td className="value" data-value={p.overall}>{p.overall}</td>
-                      <td className="value">{p.stats.pass}</td>
-                      <td className="value">{p.stats.shot}</td>
-                      <td className="value">{p.stats.def}</td>
-                      <td className="value">{p.stats.drib}</td>
-                      <td className="value">{p.stats.tackle}</td>
+                        style={{ background: p.slot ? 'rgba(34,197,94,0.10)' : (p.benchIndex !== undefined ? 'rgba(239,68,68,0.08)' : undefined) }}>
+                      <td style={{ textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{p.number} {p.name}</td>
+                      <td style={{ textAlign: 'left' }}>{p.primaryRole}</td>
+                      <td style={{ textAlign: 'left' }} className="value" data-value={p.overall}>{p.overall}</td>
+                      <td style={{ textAlign: 'left' }} className="value">{p.stats.pass}</td>
+                      <td style={{ textAlign: 'left' }} className="value">{p.stats.shot}</td>
+                      <td style={{ textAlign: 'left' }} className="value">{p.stats.def}</td>
+                      <td style={{ textAlign: 'left' }} className="value">{p.stats.drib}</td>
+                      <td style={{ textAlign: 'left' }} className="value">{p.stats.tackle}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -253,7 +285,7 @@ export default function Squad() {
         </div>
 
         {/* Middle: field with DnD positions */}
-        <div className="table-container" style={{ flex: '1 1 55%' }}>
+        <div className="table-container" style={{ flex: '0 0 30%' }}>
           <h3>Starting XI — drag players here</h3>
           <div style={{
             position: 'relative',
@@ -283,9 +315,19 @@ export default function Squad() {
                         if (id) {
                           const pl = players.find(pp => String(pp.id) === String(id))
                           const natural = positions[sec][idx]?.natural || []
-                          // Allow within section; mark OOP if role not natural for this slot
-                          valid = !!pl && pl.section === sec
-                          oop = !!pl && pl.section === sec && !natural.includes(pl.primaryRole)
+                            // Allow DF/MF/FW across sections; forbid GK<>non-GK
+                            if (pl) {
+                              if (sec === 'GK') {
+                                valid = pl.primaryRole === 'GK'
+                                oop = false
+                              } else if (pl.primaryRole === 'GK') {
+                                valid = false
+                                oop = false
+                              } else {
+                                valid = true
+                                oop = !natural.includes(pl.primaryRole)
+                              }
+                            }
                         }
                         setHover({ sec, idx, valid, oop })
                       }}
@@ -303,12 +345,7 @@ export default function Squad() {
                       style={{
                         padding: 8,
                         textAlign: 'center',
-                        background: occupant ? undefined : 'rgba(0,0,0,0.15)',
-                        backgroundImage: occupant ? (()=>{
-                          const occSec = occupant ? roleSection(occupant.primaryRole) : sec
-                          const acc = sectionAccent(occSec)
-                          return `linear-gradient(135deg, ${acc.translucent} 0%, rgba(0,0,0,0) 60%), #ffffff`
-                        })() : undefined,
+                        background: occupant ? '#ffffff' : 'rgba(0,0,0,0.06)',
                         borderStyle: occupant ? 'solid' : 'dashed',
                         borderColor: (()=>{
                           if (flash && flash.type==='slot' && flash.sec===sec && flash.idx===idx) return '#dc2626'
@@ -328,7 +365,7 @@ export default function Squad() {
                         justifyContent: 'center',
                         position: 'relative',
                         cursor: occupant ? 'pointer' : 'default',
-                        boxShadow: occupant ? '0 6px 16px rgba(0,0,0,0.25)' : undefined,
+                        boxShadow: occupant ? '0 4px 10px rgba(0,0,0,0.12)' : undefined,
                         color: occupant ? '#0f172a' : undefined,
                         borderWidth: occupant ? 2 : 1,
                         borderRadius: 10
@@ -338,7 +375,7 @@ export default function Squad() {
                       {occupant ? (
                         <div draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', occupant.id) }}>
                           {(() => { const secTag = roleSection(occupant.primaryRole); const acc = sectionAccent(secTag); return (
-                            <div style={{ position: 'absolute', top: 6, left: 6, background: occupant.slot?.oop ? '#fee2e2' : acc.solid, color: occupant.slot?.oop ? '#991b1b' : '#fff', borderRadius: 9999, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>
+                            <div style={{ position: 'absolute', top: 6, left: 6, background: occupant.slot?.oop ? '#fee2e2' : acc.translucent, color: occupant.slot?.oop ? '#991b1b' : acc.text, borderRadius: 9999, padding: '2px 8px', fontSize: 11, fontWeight: 700, border: `1px solid ${occupant.slot?.oop ? '#fecaca' : acc.solid}` }}>
                               {occupant.primaryRole}
                             </div>
                           ) })()}
@@ -369,7 +406,7 @@ export default function Squad() {
         </div>
 
         {/* Right: bench (7 slots) */}
-        <div className="table-container" style={{ flex: '1 1 20%' }}>
+        <div className="table-container" style={{ flex: '0 0 10%' }}>
           <h3>Bench (7)</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
             {Array.from({ length: 7 }).map((_, i) => {
@@ -380,11 +417,11 @@ export default function Squad() {
                      onDragOver={(e)=> e.preventDefault()}
                      onDrop={(e)=>{ const id = e.dataTransfer.getData('text/plain'); if (id) assignToBench(id, i) }}
                      onClick={() => { if (bOcc) clearBench(i) }}
-                     style={{ padding: 8, background: bOcc ? undefined : 'rgba(0,0,0,0.15)', borderColor: (flash && flash.type==='bench' && flash.idx===i) ? '#dc2626' : 'var(--border)', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: bOcc ? 'pointer' : 'default', boxShadow: bOcc ? '0 6px 16px rgba(0,0,0,0.25)' : undefined, borderWidth: bOcc ? 2 : 1, borderRadius: 10, backgroundImage: bOcc ? (()=>{ const acc = sectionAccent(roleSection(bOcc.primaryRole)); return `linear-gradient(135deg, ${acc.translucent} 0%, rgba(0,0,0,0) 60%), #ffffff`; })() : undefined, borderStyle: 'solid' }}>
+                     style={{ padding: 8, background: bOcc ? '#ffffff' : 'rgba(0,0,0,0.06)', borderColor: (flash && flash.type==='bench' && flash.idx===i) ? '#dc2626' : 'var(--border)', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: bOcc ? 'pointer' : 'default', boxShadow: bOcc ? '0 4px 10px rgba(0,0,0,0.12)' : undefined, borderWidth: bOcc ? 2 : 1, borderRadius: 10, borderStyle: 'solid' }}>
                   {bOcc ? (
                     <div draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', bOcc.id) }}>
                       {(() => { const secTag = roleSection(bOcc.primaryRole); const acc = sectionAccent(secTag); return (
-                        <div style={{ position: 'absolute', top: 6, left: 6, background: acc.solid, color: '#fff', borderRadius: 9999, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>
+                        <div style={{ position: 'absolute', top: 6, left: 6, background: acc.translucent, color: acc.text, borderRadius: 9999, padding: '2px 8px', fontSize: 11, fontWeight: 700, border: `1px solid ${acc.solid}` }}>
                           {bOcc.primaryRole}
                         </div>
                       ) })()}
