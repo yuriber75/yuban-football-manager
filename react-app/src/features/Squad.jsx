@@ -68,8 +68,9 @@ export default function Squad() {
     const p = next[i]
     // Enforce section only; allow out-of-position with red border indicator
     if (p.section !== sec) return
-    const slot = positions[sec][index]
-    const isOOP = Array.isArray(slot?.natural) ? !slot.natural.includes(p.primaryRole) : false
+  const slot = positions[sec][index]
+  const isOOP = Array.isArray(slot?.natural) ? !slot.natural.includes(p.primaryRole) : false
+  const penalty = isOOP ? 0.9 : 1
     // Determine if target occupied
     const targetOccIdx = next.findIndex(x => x.slot && x.slot.section === sec && x.slot.index === index)
     const fromSlot = p.slot ? { ...p.slot } : null
@@ -79,9 +80,10 @@ export default function Squad() {
       // Compute target player's OOP status for the original slot
       const fromSlotDef = positions[fromSlot.section][fromSlot.index]
       const targetOOP = Array.isArray(fromSlotDef?.natural) ? !fromSlotDef.natural.includes(targetPlayer.primaryRole) : false
-      targetPlayer.slot = { section: fromSlot.section, index: fromSlot.index, oop: targetOOP }
+      const targetPenalty = targetOOP ? 0.9 : 1
+      targetPlayer.slot = { section: fromSlot.section, index: fromSlot.index, oop: targetOOP, penalty: targetPenalty }
       targetPlayer.starting = true
-      p.slot = { section: sec, index, oop: isOOP }
+      p.slot = { section: sec, index, oop: isOOP, penalty }
       p.starting = true
     } else {
       // Move player into target slot (clear target occupant if any)
@@ -98,7 +100,7 @@ export default function Squad() {
         p.benchIndex = undefined
       }
       p.starting = true
-      p.slot = { section: sec, index, oop: isOOP }
+      p.slot = { section: sec, index, oop: isOOP, penalty }
     }
     updateTeam(next)
   }
@@ -296,17 +298,19 @@ export default function Squad() {
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        position: 'relative'
+                        position: 'relative',
+                        cursor: occupant ? 'pointer' : 'default'
                       }}
+                      onClick={() => { if (occupant) clearSlot(sec, idx) }}
                     >
                       {occupant ? (
                         <div draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', occupant.id) }}>
                           <div style={{ fontSize: 12, opacity: 0.9 }}>{occupant.primaryRole}</div>
                           <div style={{ fontWeight: 700 }}>{occupant.name}</div>
-                          <div style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.65)', color: '#fff', borderRadius: 10, padding: '2px 6px', fontSize: 12, lineHeight: 1 }}>
+                          <div style={{ fontSize: 12, opacity: 0.9 }}>OVR {Math.round(occupant.overall * (occupant.slot?.oop ? 0.9 : 1))}</div>
+                          <div style={{ position: 'absolute', top: 6, right: 6, background: '#facc15', color: '#000', borderRadius: '9999px', padding: '4px 6px', fontSize: 12, lineHeight: 1, fontWeight: 700, boxShadow: '0 0 0 2px rgba(0,0,0,0.15)' }}>
                             #{occupant.number}
                           </div>
-                          <button className="btn-warn" style={{ marginTop: 6, width: 'auto' }} onClick={()=>clearSlot(sec, idx)}>Remove</button>
                         </div>
                       ) : (
                         <div style={{ color: 'var(--muted)' }}>
@@ -337,15 +341,16 @@ export default function Squad() {
                      className="card"
                      onDragOver={(e)=> e.preventDefault()}
                      onDrop={(e)=>{ const id = e.dataTransfer.getData('text/plain'); if (id) assignToBench(id, i) }}
-                     style={{ padding: 8, background: bOcc ? 'rgba(239,68,68,0.12)' : 'rgba(0,0,0,0.25)', borderColor: (flash && flash.type==='bench' && flash.idx===i) ? '#dc2626' : 'var(--border)', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                     onClick={() => { if (bOcc) clearBench(i) }}
+                     style={{ padding: 8, background: bOcc ? 'rgba(239,68,68,0.12)' : 'rgba(0,0,0,0.25)', borderColor: (flash && flash.type==='bench' && flash.idx===i) ? '#dc2626' : 'var(--border)', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: bOcc ? 'pointer' : 'default' }}>
                   {bOcc ? (
                     <div draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', bOcc.id) }}>
                       <div style={{ fontSize: 12, opacity: 0.9 }}>{bOcc.primaryRole}</div>
                       <div style={{ fontWeight: 700 }}>{bOcc.name}</div>
-                      <div style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.65)', color: '#fff', borderRadius: 10, padding: '2px 6px', fontSize: 12, lineHeight: 1 }}>
+                      <div style={{ fontSize: 12, opacity: 0.9 }}>OVR {bOcc.overall}</div>
+                      <div style={{ position: 'absolute', top: 6, right: 6, background: '#facc15', color: '#000', borderRadius: '9999px', padding: '4px 6px', fontSize: 12, lineHeight: 1, fontWeight: 700, boxShadow: '0 0 0 2px rgba(0,0,0,0.15)' }}>
                         #{bOcc.number}
                       </div>
-                      <button className="btn-warn" style={{ marginTop: 6, width: 'auto' }} onClick={()=>clearBench(i)}>Remove</button>
                     </div>
                   ) : (
                     <div style={{ color: 'var(--muted)' }}>Bench</div>
