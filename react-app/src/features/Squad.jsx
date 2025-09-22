@@ -48,17 +48,6 @@ export default function Squad() {
 
   if (!team) return <div className="card">No team found. Start a career.</div>
 
-  // When a line has 5 players (e.g., MF in 3-5-2 or 4-5-1, DF in 5-4-1), widen spacing and push extremes outward
-  function adjustedXForFive(sec, idx, x) {
-    const len = positions?.[sec]?.length || 0
-    if (len === 5) {
-      const offsets = [-8, -3, 0, 3, 8] // widen extremes (-8/+8) and increase spacing (-3/+3) for inner ones
-      const nx = x + (offsets[idx] || 0)
-      return Math.max(5, Math.min(95, nx))
-    }
-    return x
-  }
-
   function updateTeam(nextPlayers, nextFormation = formation) {
     const nextTeams = state.teams.map(t => t.name === team.name ? { ...t, players: nextPlayers, tactics: { ...(t.tactics||{}), formation: nextFormation } } : t)
     setState({ ...state, teams: nextTeams })
@@ -109,7 +98,8 @@ export default function Squad() {
     }
     // Allow cross-department placement among DF/MF/FW; apply OOP penalty via naturals check
   const slot = positions[sec][index]
-  const isOOP = Array.isArray(slot?.natural) ? !slot.natural.includes(p.primaryRole) : false
+  const playerRoles = Array.isArray(p.roles) && p.roles.length ? p.roles : [p.primaryRole]
+  const isOOP = Array.isArray(slot?.natural) ? !slot.natural.some(r => playerRoles.includes(r)) : false
   const penalty = isOOP ? 0.9 : 1
     // Determine if target occupied
     const targetOccIdx = next.findIndex(x => x.slot && x.slot.section === sec && x.slot.index === index)
@@ -118,8 +108,9 @@ export default function Squad() {
       // Swap occupants between slots (same section)
       const targetPlayer = next[targetOccIdx]
       // Compute target player's OOP status for the original slot
-      const fromSlotDef = positions[fromSlot.section][fromSlot.index]
-      const targetOOP = Array.isArray(fromSlotDef?.natural) ? !fromSlotDef.natural.includes(targetPlayer.primaryRole) : false
+  const fromSlotDef = positions[fromSlot.section][fromSlot.index]
+  const targetRoles = Array.isArray(targetPlayer.roles) && targetPlayer.roles.length ? targetPlayer.roles : [targetPlayer.primaryRole]
+  const targetOOP = Array.isArray(fromSlotDef?.natural) ? !fromSlotDef.natural.some(r => targetRoles.includes(r)) : false
       const targetPenalty = targetOOP ? 0.9 : 1
       targetPlayer.slot = { section: fromSlot.section, index: fromSlot.index, oop: targetOOP, penalty: targetPenalty }
       targetPlayer.starting = true
@@ -222,23 +213,22 @@ export default function Squad() {
 
   return (
     <div className="card">
-      {/* Title removed per request; keep only formation selector if needed */}
-      <div className="row2" style={{ alignItems: 'end', justifyContent: 'flex-end' }}>
+      <div className="row2" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <label>Formation</label>
+          <label style={{ marginRight: 8 }}>Formation</label>
           <select value={formation} onChange={onChangeFormation}>
             {Object.keys(GAME_CONSTANTS.FORMATIONS).map(f => (
               <option key={f} value={f}>{f.slice(0,1)}-{f.slice(1,2)}-{f.slice(2)}</option>
             ))}
           </select>
         </div>
-      </div>
-      <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-        <button className="btn-secondary" onClick={autoPick} style={{ width: 'auto' }}>Auto-pick XI</button>
-        <button className="btn-warn" onClick={clearStarters} style={{ width: 'auto' }}>Clear XI</button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button className="btn-secondary" onClick={autoPick} style={{ width: 'auto' }}>Auto-pick XI</button>
+          <button className="btn-warn" onClick={clearStarters} style={{ width: 'auto' }}>Clear XI</button>
+        </div>
       </div>
 
-  <div className="row2" style={{ marginTop: 12, flexWrap: 'nowrap', alignItems: 'flex-start' }}>
+  <div className="row2" style={{ marginTop: 12, flexWrap: 'nowrap' }}>
         {/* Left: roster grouped by roles */}
         <div className="table-container" style={{ flex: '0 0 60%' }}>
           <h3>Roster</h3>
@@ -315,11 +305,9 @@ export default function Squad() {
                   const id = e.dataTransfer.getData('text/plain')
                   if (id) assignToSlot(id, sec, idx)
                 }
-                const slotWidth = 100
-                const slotHeight = Math.round(slotWidth * 1.5)
-                const adjX = adjustedXForFive(sec, idx, pos.x)
+                const slotSize = 100
                 return (
-                  <div key={slotKey} style={{ position: 'absolute', left: `${adjX}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)', width: slotWidth }}>
+                  <div key={slotKey} style={{ position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)', width: slotSize }}>
                     <div
                       onDragEnter={(e)=>{
                         const id = e.dataTransfer.getData('text/plain')
@@ -338,7 +326,8 @@ export default function Squad() {
                                 oop = false
                               } else {
                                 valid = true
-                                oop = !natural.includes(pl.primaryRole)
+                                const rset = Array.isArray(pl.roles) && pl.roles.length ? pl.roles : [pl.primaryRole]
+                                oop = !natural.some(r => rset.includes(r))
                               }
                             }
                         }
@@ -370,8 +359,8 @@ export default function Squad() {
                           if (hover && hover.sec === sec && hover.idx === idx) return (hover.valid ? (hover.oop ? '#dc2626' : 'var(--border)') : '#dc2626')
                           return 'var(--border)'
                         })(),
-                        width: slotWidth,
-                        height: slotHeight,
+                        width: slotSize,
+                        height: slotSize * 1.5,
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
@@ -424,13 +413,13 @@ export default function Squad() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
             {Array.from({ length: 7 }).map((_, i) => {
               const bOcc = bench.find(p => p.benchIndex === i)
-    return (
-                <div key={i}
+              return (
+       <div key={i}
                      className="card"
                      onDragOver={(e)=> e.preventDefault()}
                      onDrop={(e)=>{ const id = e.dataTransfer.getData('text/plain'); if (id) assignToBench(id, i) }}
                      onClick={() => { if (bOcc) clearBench(i) }}
-      style={{ padding: 8, background: bOcc ? '#ffffff' : 'rgba(0,0,0,0.06)', borderColor: (flash && flash.type==='bench' && flash.idx===i) ? '#dc2626' : 'var(--border)', width: 80, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: bOcc ? 'pointer' : 'default', boxShadow: bOcc ? '0 4px 10px rgba(0,0,0,0.12)' : undefined, borderWidth: bOcc ? 2 : 1, borderRadius: 10, borderStyle: 'solid' }}>
+         style={{ padding: 8, background: bOcc ? '#ffffff' : 'rgba(0,0,0,0.06)', borderColor: (flash && flash.type==='bench' && flash.idx===i) ? '#dc2626' : 'var(--border)', width: 80, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: bOcc ? 'pointer' : 'default', boxShadow: bOcc ? '0 4px 10px rgba(0,0,0,0.12)' : undefined, borderWidth: bOcc ? 2 : 1, borderRadius: 10, borderStyle: 'solid' }}>
                   {bOcc ? (
                     <div draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', bOcc.id) }}>
                       {(() => { const secTag = roleSection(bOcc.primaryRole); const acc = sectionAccent(secTag); return (

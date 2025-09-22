@@ -50,11 +50,43 @@ export function makePlayer(primaryRole = 'MC') {
     Number(((overall / 100) * GAME_CONSTANTS.FINANCE.BASE_WAGE_MULTIPLIER).toFixed(2))
   )
 
+  // Assign roles: primary plus optional secondary/tertiary per mapping
+  // 30% chance for a second role; 10% for a third role (if available).
+  // Exclude GK from multi-role assignment.
+  const roles = [primaryRole]
+  if (primaryRole !== 'GK') {
+    const SECONDARY_ROLE_MAP = {
+      DL: ['DC', 'ML'],
+      DC: ['DL', 'DR'],
+      DR: ['DC', 'DL'],
+      MR: ['ML', 'MC', 'DR', 'FR'],
+      ML: ['MR', 'MC', 'DL', 'FL'],
+      ST: ['MC', 'FR', 'FL'],
+      MC: ['MR', 'ML', 'DC'],
+      // FR/FL not specified in mapping; leave as single-role unless primary is something else that maps to them
+    }
+    const options = SECONDARY_ROLE_MAP[primaryRole] || []
+    // Helper to pick a random element not already in roles
+    const pickUnique = (arr) => {
+      const pool = arr.filter(r => !roles.includes(r))
+      if (!pool.length) return null
+      return pool[Math.floor(Math.random() * pool.length)]
+    }
+    if (Math.random() < 0.30 && options.length) {
+      const second = pickUnique(options)
+      if (second) roles.push(second)
+    }
+    if (Math.random() < 0.10 && options.length) {
+      const third = pickUnique(options)
+      if (third) roles.push(third)
+    }
+  }
+
   return {
     id: crypto.randomUUID?.() || Math.random().toString(36).slice(2),
     name: `${nameFirst} ${nameLast}`,
     age,
-    roles: [primaryRole],
+    roles,
     primaryRole,
     stats,
     overall,

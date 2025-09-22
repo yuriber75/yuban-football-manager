@@ -82,11 +82,11 @@ export const GAME_CONSTANTS = {
         { x: 65, y: 20, natural: ['FR', 'FL', 'ST'] },
       ],
       MF: [
-        { x: 20, y: 45, natural: ['ML'] },
-        { x: 35, y: 45, natural: ['MC'] },
+        { x: 10, y: 45, natural: ['ML'] },
+        { x: 30, y: 45, natural: ['MC'] },
         { x: 50, y: 45, natural: ['MC'] },
-        { x: 65, y: 45, natural: ['MC'] },
-        { x: 80, y: 45, natural: ['MR'] },
+        { x: 70, y: 45, natural: ['MC'] },
+        { x: 90, y: 45, natural: ['MR'] },
       ],
       DF: [
         { x: 30, y: 70, natural: ['DC'] },
@@ -98,11 +98,11 @@ export const GAME_CONSTANTS = {
     '451': {
       FW: [{ x: 50, y: 20, natural: ['ST'] }],
       MF: [
-        { x: 20, y: 45, natural: ['ML', 'MR'] },
-        { x: 35, y: 45, natural: ['MC'] },
+        { x: 10, y: 45, natural: ['ML', 'MR'] },
+        { x: 30, y: 45, natural: ['MC'] },
         { x: 50, y: 45, natural: ['MC'] },
-        { x: 65, y: 45, natural: ['MC'] },
-        { x: 80, y: 45, natural: ['ML', 'MR'] },
+        { x: 70, y: 45, natural: ['MC'] },
+        { x: 90, y: 45, natural: ['ML', 'MR'] },
       ],
       DF: [
         { x: 20, y: 70, natural: ['DL'] },
