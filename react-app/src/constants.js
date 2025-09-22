@@ -252,6 +252,6 @@ export const GAME_CONSTANTS = {
     WEIGHTS: window.GAME_CONSTANTS?.PLAYER_STATS?.WEIGHTS || {},
   },
   STORAGE: {
-    SAVE_KEY: 'yuban-fm-save', // aligned with repo guidance
+    SAVE_KEY: 'manager-sim-save-v2', // match vanilla app for backward compatibility
   },
 };
