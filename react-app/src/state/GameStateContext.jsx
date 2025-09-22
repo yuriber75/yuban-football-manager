@@ -64,7 +64,13 @@ function hydrate(raw) {
   if (Array.isArray(parsed.teams)) {
     parsed.teams = parsed.teams.map((team) => ({
       ...team,
-      finances: team.finances || { cash: 0, wageBudget: GAME_CONSTANTS.FINANCE.INITIAL_WAGE_BUDGET },
+      finances: {
+        cash: 0,
+        wageBudget: GAME_CONSTANTS.FINANCE.INITIAL_WAGE_BUDGET,
+        stadiumCapacity: GAME_CONSTANTS.FINANCE.MIN_STADIUM_CAPACITY,
+        attendance: GAME_CONSTANTS.FINANCE.INITIAL_ATTENDANCE,
+        ...(team.finances || {}),
+      },
       tactics: team.tactics || { formation: team.formation || '442' },
     }))
   }

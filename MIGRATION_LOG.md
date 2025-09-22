@@ -18,3 +18,9 @@ Next steps:
 - Created Match tab UI (`react-app/src/features/MatchWeek.jsx`) to view current fixtures and simulate the week.
 - Enhanced League tab to order the table and show last week results.
 - Built production bundle via Vite to validate.
+
+## 2025-09-22 (cont. 2)
+- Added weekly finance engine (`react-app/src/engine/financeEngine.js`): attendance trends, gate receipts, sponsors, maintenance, and wages; updates each team’s finances after match week.
+- Seeded team finance defaults in generator and hydration: `stadiumCapacity` and `attendance`.
+- Wired finance updates to run after weekly simulation in `MatchWeek.jsx`.
+- Fixed dev script: added `npm start` alias and updated `react-app/README.md` run instructions.

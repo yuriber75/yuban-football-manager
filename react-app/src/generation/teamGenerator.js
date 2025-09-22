@@ -31,6 +31,13 @@ export function makeTeam(name, formation = '442') {
   const finances = {
     cash: GAME_CONSTANTS.FINANCE.INITIAL_CASH,
     wageBudget: GAME_CONSTANTS.FINANCE.INITIAL_WAGE_BUDGET,
+    stadiumCapacity: Math.floor(
+      GAME_CONSTANTS.FINANCE.MIN_STADIUM_CAPACITY + Math.random() * (GAME_CONSTANTS.FINANCE.MAX_STADIUM_CAPACITY - GAME_CONSTANTS.FINANCE.MIN_STADIUM_CAPACITY)
+    ),
+    attendance: Math.min(
+      GAME_CONSTANTS.FINANCE.INITIAL_ATTENDANCE,
+      GAME_CONSTANTS.FINANCE.MAX_STADIUM_CAPACITY
+    ),
   }
 
   return {

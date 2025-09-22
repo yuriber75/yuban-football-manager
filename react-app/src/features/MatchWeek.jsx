@@ -1,6 +1,7 @@
 import React from 'react'
 import { useGameState } from '../state/GameStateContext'
 import { simulateWeek } from '../engine/matchEngine'
+import { applyWeeklyFinances } from '../engine/financeEngine'
 
 export default function MatchWeek() {
   const { state, setState, saveNow } = useGameState()
@@ -8,8 +9,9 @@ export default function MatchWeek() {
   const fixtures = state.league.fixtures[weekIndex] || []
 
   const onSimulate = () => {
-    const next = simulateWeek(state)
-    setState(next)
+    const { nextState, weekResults } = simulateWeek(state)
+    const withFinances = applyWeeklyFinances(nextState, weekResults)
+    setState(withFinances)
     saveNow()
   }
 

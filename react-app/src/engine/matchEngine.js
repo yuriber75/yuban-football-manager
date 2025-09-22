@@ -86,5 +86,5 @@ export function simulateWeek(state) {
     },
   }
 
-  return { ...state, league: newLeague }
+  return { nextState: { ...state, league: newLeague }, weekResults: results }
 }
