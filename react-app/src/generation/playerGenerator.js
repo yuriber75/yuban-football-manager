@@ -15,9 +15,9 @@ export function makePlayer(primaryRole = 'MC') {
   let posBase
   if (primaryRole === 'GK') {
     const gkStyles = [
-      { speed: 35, pass: 70, shot: 55, def: 75, drib: 30, tackle: 65 }, // modern GK
-      { speed: 40, pass: 50, shot: 50, def: 85, drib: 20, tackle: 70 }, // classic GK
-      { speed: 45, pass: 55, shot: 60, def: 80, drib: 25, tackle: 60 }, // athletic GK
+      { speed: 35, pass: 70, shot: 55, def: 75, freeKick: 40, penalty: 65 }, // modern GK
+      { speed: 40, pass: 50, shot: 50, def: 85, freeKick: 35, penalty: 70 }, // classic GK
+      { speed: 45, pass: 55, shot: 60, def: 80, freeKick: 45, penalty: 60 }, // athletic GK
     ]
     posBase = gkStyles[Math.floor(Math.random() * gkStyles.length)]
   } else {
@@ -29,13 +29,11 @@ export function makePlayer(primaryRole = 'MC') {
   const nameFirst = GAME_CONSTANTS.NAMES.FIRST[randomBetween(0, GAME_CONSTANTS.NAMES.FIRST.length - 1)] || 'Alex'
   const nameLast = GAME_CONSTANTS.NAMES.LAST[randomBetween(0, GAME_CONSTANTS.NAMES.LAST.length - 1)] || 'Smith'
 
-  const stats = {
-    speed: randomBetween(posBase.speed - 8, posBase.speed + 8),
-    pass: randomBetween(posBase.pass - 8, posBase.pass + 8),
-    shot: randomBetween(posBase.shot - 8, posBase.shot + 8),
-    def: randomBetween(posBase.def - 8, posBase.def + 8),
-    drib: randomBetween(posBase.drib - 8, posBase.drib + 8),
-    tackle: randomBetween(posBase.tackle - 8, posBase.tackle + 8),
+  // Generate stats for all weighted keys to ensure overall is valid
+  const stats = {}
+  for (const key of Object.keys(posWeights)) {
+    const base = typeof posBase[key] === 'number' ? posBase[key] : 55
+    stats[key] = randomBetween(base - 8, base + 8)
   }
 
   const overall = weightedAverage(stats, posWeights)
