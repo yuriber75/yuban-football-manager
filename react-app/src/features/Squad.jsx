@@ -267,7 +267,7 @@ export default function Squad() {
                         draggable
                         onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', p.id) }}
                         title="Drag to field or bench"
-                        style={{ background: p.slot ? 'rgba(34,197,94,0.10)' : (p.benchIndex !== undefined ? 'rgba(239,68,68,0.08)' : undefined) }}>
+                        style={{ background: p.slot ? 'rgba(34,197,94,0.10)' : (p.benchIndex !== undefined ? 'rgba(0,0,0,0.06)' : undefined) }}>
                       <td style={{ textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{p.number} {p.name}</td>
                       <td style={{ textAlign: 'left' }}>{(Array.isArray(p.roles) && p.roles.length ? p.roles : [p.primaryRole]).join('/')}</td>
                       <td style={{ textAlign: 'left' }} className="value" data-value={p.overall}>{p.overall}</td>
