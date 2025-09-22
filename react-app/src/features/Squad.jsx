@@ -287,7 +287,7 @@ export default function Squad() {
                       style={{
                         padding: 8,
                         textAlign: 'center',
-                        background: occupant ? 'rgba(34,197,94,0.2)' : 'rgba(0,0,0,0.35)',
+                        background: occupant ? '#ffffff' : 'rgba(0,0,0,0.15)',
                         borderStyle: occupant ? 'solid' : 'dashed',
                         borderColor: (flash && flash.type==='slot' && flash.sec===sec && flash.idx===idx) ? '#dc2626' : (
                           occupant && occupant.slot?.oop ? '#dc2626' : (hover && hover.sec === sec && hover.idx === idx ? (hover.valid ? (hover.oop ? '#dc2626' : 'var(--border)') : '#dc2626') : 'var(--border)')
@@ -299,21 +299,23 @@ export default function Squad() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         position: 'relative',
-                        cursor: occupant ? 'pointer' : 'default'
+                        cursor: occupant ? 'pointer' : 'default',
+                        boxShadow: occupant ? '0 2px 8px rgba(0,0,0,0.25)' : undefined,
+                        color: occupant ? '#0f172a' : undefined
                       }}
                       onClick={() => { if (occupant) clearSlot(sec, idx) }}
                     >
                       {occupant ? (
                         <div draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', occupant.id) }}>
-                          <div style={{ fontSize: 12, opacity: 0.9 }}>{occupant.primaryRole}</div>
+                          <div style={{ fontSize: 12, opacity: 0.9, color: occupant.slot?.oop ? '#b91c1c' : '#0369a1' }}>{occupant.primaryRole}</div>
                           <div style={{ fontWeight: 700 }}>{occupant.name}</div>
                           <div style={{ fontSize: 12, opacity: 0.9 }}>OVR {Math.round(occupant.overall * (occupant.slot?.oop ? 0.9 : 1))}</div>
-                          <div style={{ position: 'absolute', top: 6, right: 6, background: '#facc15', color: '#000', borderRadius: '9999px', padding: '4px 6px', fontSize: 12, lineHeight: 1, fontWeight: 700, boxShadow: '0 0 0 2px rgba(0,0,0,0.15)' }}>
+                          <div style={{ position: 'absolute', top: -6, right: -6, background: '#facc15', color: '#000', borderRadius: '9999px', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, lineHeight: 1, fontWeight: 800, boxShadow: '0 2px 6px rgba(0,0,0,0.25)' }}>
                             #{occupant.number}
                           </div>
                         </div>
                       ) : (
-                        <div style={{ color: 'var(--muted)' }}>
+                        <div style={{ color: 'var(--muted)', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {(() => {
                             const naturals = positions[sec][idx]?.natural || []
                             return naturals.length ? naturals.join('/') : sec
@@ -342,18 +344,18 @@ export default function Squad() {
                      onDragOver={(e)=> e.preventDefault()}
                      onDrop={(e)=>{ const id = e.dataTransfer.getData('text/plain'); if (id) assignToBench(id, i) }}
                      onClick={() => { if (bOcc) clearBench(i) }}
-                     style={{ padding: 8, background: bOcc ? 'rgba(239,68,68,0.12)' : 'rgba(0,0,0,0.25)', borderColor: (flash && flash.type==='bench' && flash.idx===i) ? '#dc2626' : 'var(--border)', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: bOcc ? 'pointer' : 'default' }}>
+                     style={{ padding: 8, background: bOcc ? '#ffffff' : 'rgba(0,0,0,0.15)', borderColor: (flash && flash.type==='bench' && flash.idx===i) ? '#dc2626' : 'var(--border)', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: bOcc ? 'pointer' : 'default', boxShadow: bOcc ? '0 2px 8px rgba(0,0,0,0.25)' : undefined }}>
                   {bOcc ? (
                     <div draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', bOcc.id) }}>
-                      <div style={{ fontSize: 12, opacity: 0.9 }}>{bOcc.primaryRole}</div>
-                      <div style={{ fontWeight: 700 }}>{bOcc.name}</div>
+                      <div style={{ fontSize: 12, opacity: 0.9, color: '#7c2d12' }}>{bOcc.primaryRole}</div>
+                      <div style={{ fontWeight: 700, color: '#1f2937' }}>{bOcc.name}</div>
                       <div style={{ fontSize: 12, opacity: 0.9 }}>OVR {bOcc.overall}</div>
-                      <div style={{ position: 'absolute', top: 6, right: 6, background: '#facc15', color: '#000', borderRadius: '9999px', padding: '4px 6px', fontSize: 12, lineHeight: 1, fontWeight: 700, boxShadow: '0 0 0 2px rgba(0,0,0,0.15)' }}>
+                      <div style={{ position: 'absolute', top: -6, right: -6, background: '#facc15', color: '#000', borderRadius: '9999px', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, lineHeight: 1, fontWeight: 800, boxShadow: '0 2px 6px rgba(0,0,0,0.25)' }}>
                         #{bOcc.number}
                       </div>
                     </div>
                   ) : (
-                    <div style={{ color: 'var(--muted)' }}>Bench</div>
+                    <div style={{ color: 'var(--muted)', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Bench</div>
                   )}
                 </div>
               )
