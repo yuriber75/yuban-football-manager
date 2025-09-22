@@ -14,6 +14,17 @@ function weightedAverage(stats, weights) {
   )
 }
 
+// Sample a target overall in 55–95 with a custom distribution:
+// 15% 86–95, 30% 80–85, 20% 71–79, 20% 65–70, 15% 55–64
+function sampleTargetOverall() {
+  const r = Math.random()
+  if (r < 0.15) return randomBetween(86, 95)
+  if (r < 0.45) return randomBetween(80, 85)
+  if (r < 0.65) return randomBetween(71, 79)
+  if (r < 0.85) return randomBetween(65, 70)
+  return randomBetween(55, 64)
+}
+
 export function makePlayer(primaryRole = 'MC') {
   // Use vanilla-like GK styles for goalkeepers; otherwise use role base stats
   let posBase
@@ -35,16 +46,48 @@ export function makePlayer(primaryRole = 'MC') {
 
   // Generate stats for all weighted keys to ensure overall is valid
   const stats = {}
-  // Wider spread to allow higher-ceiling players and clamp to [55, 90]
-  const SPREAD = 15
+  // Wider spread to allow higher-ceiling players and clamp to [55, 95]
+  const SPREAD = 18
   for (const key of Object.keys(posWeights)) {
     const base = typeof posBase[key] === 'number' ? posBase[key] : 55
     const lo = Math.max(55, base - SPREAD)
-    const hi = Math.min(90, base + SPREAD)
-    stats[key] = clamp(randomBetween(lo, hi), 55, 90)
+    const hi = Math.min(95, base + SPREAD)
+    stats[key] = clamp(randomBetween(lo, hi), 55, 95)
   }
 
-  const overall = weightedAverage(stats, posWeights)
+  // Aim overall to follow the requested distribution
+  const targetOverall = sampleTargetOverall()
+  let overall = weightedAverage(stats, posWeights)
+  if (overall !== targetOverall) {
+    // Scale stats toward target overall; then fine-tune on high-weight attributes
+    const scale = targetOverall / Math.max(1, overall)
+    for (const key of Object.keys(posWeights)) {
+      stats[key] = clamp(Math.round(stats[key] * scale), 55, 95)
+    }
+    overall = weightedAverage(stats, posWeights)
+    // If still off by more than 2, adjust top-weighted keys greedily
+    let attempts = 0
+    while (Math.abs(overall - targetOverall) > 2 && attempts < 3) {
+      const diff = targetOverall - overall
+      // sort keys by weight desc
+      const keysByWeight = Object.keys(posWeights).sort((a,b)=> posWeights[b] - posWeights[a])
+      let remaining = Math.abs(diff)
+      for (const k of keysByWeight) {
+        if (remaining <= 0) break
+        const w = posWeights[k]
+        // allocate adjustment proportional to weight (at least 1)
+        const step = Math.max(1, Math.round(remaining * w))
+        if (diff > 0) {
+          stats[k] = clamp(stats[k] + step, 55, 95)
+        } else {
+          stats[k] = clamp(stats[k] - step, 55, 95)
+        }
+        remaining -= step
+      }
+      overall = weightedAverage(stats, posWeights)
+      attempts++
+    }
+  }
 
   const value = Math.max(
     GAME_CONSTANTS.FINANCE.MIN_TRANSFER_VALUE,
