@@ -109,11 +109,69 @@ export function MarketProvider({ children }) {
     const current = team.players.reduce((sum, p) => sum + (p.wage || 0), 0)
     return current + wage <= (team.finances?.wageBudget || GAME_CONSTANTS.FINANCE.INITIAL_WAGE_BUDGET)
   }
+  function wageWarning(team, addWage = 0) {
+    const budget = team.finances?.wageBudget || GAME_CONSTANTS.FINANCE.INITIAL_WAGE_BUDGET
+    const current = team.players.reduce((sum, p) => sum + (p.wage || 0), 0)
+    const ratio = (current + addWage) / Math.max(0.0001, budget)
+    return ratio >= (GAME_CONSTANTS.FINANCE.WAGE_BUDGET_WARNING_THRESHOLD || 0.9)
+  }
+  function getRoleCounts(team) {
+    const counts = { GK: 0, DEF: 0, MID: 0, ATT: 0 }
+    for (const p of team.players) {
+      const sec = roleSection(p.primaryRole)
+      if (sec === 'GK') counts.GK++
+      else if (sec === 'DF') counts.DEF++
+      else if (sec === 'MF') counts.MID++
+      else if (sec === 'FW') counts.ATT++
+    }
+    return counts
+  }
+  function wouldExceedMaxOnBuy(team, player) {
+    const sec = roleSection(player.primaryRole)
+    const counts = getRoleCounts(team)
+    const after = { ...counts }
+    if (sec === 'GK') after.GK++
+    else if (sec === 'DF') after.DEF++
+    else if (sec === 'MF') after.MID++
+    else if (sec === 'FW') after.ATT++
+    const max = GAME_CONSTANTS.FINANCE.MAX_PER_ROLE || { GK: 4, DEF: 9, MID: 9, ATT: 6 }
+    return (after.GK > max.GK) || (after.DEF > max.DEF) || (after.MID > max.MID) || (after.ATT > max.ATT)
+  }
+  function willViolateMinOnSell(team, playerId) {
+    const min = {
+      GK: GAME_CONSTANTS.FINANCE.MIN_GOALKEEPER || 2,
+      DEF: GAME_CONSTANTS.FINANCE.MIN_DEFENDER || 4,
+      MID: GAME_CONSTANTS.FINANCE.MIN_MIDFIELDER || 4,
+      ATT: GAME_CONSTANTS.FINANCE.MIN_FORWARD || 2,
+    }
+    const counts = getRoleCounts(team)
+    const player = team.players.find(p => p.id === playerId)
+    if (!player) return false
+    const sec = roleSection(player.primaryRole)
+    const after = { ...counts }
+    if (sec === 'GK') after.GK--
+    else if (sec === 'DF') after.DEF--
+    else if (sec === 'MF') after.MID--
+    else if (sec === 'FW') after.ATT--
+    const squadSizeAfter = team.players.length - 1
+    if (squadSizeAfter < (GAME_CONSTANTS.FINANCE.MIN_SQUAD_SIZE || 14)) return true
+    return (after.GK < min.GK) || (after.DEF < min.DEF) || (after.MID < min.MID) || (after.ATT < min.ATT)
+  }
+  function canListWithReason(team, playerId) {
+    const finances = team.finances || { playersForSale: [] }
+    const listed = finances.playersForSale || []
+    const maxListed = GAME_CONSTANTS.FINANCE.MAX_PLAYERS_FOR_SALE || 4
+    if (listed.some(e => e.id === playerId)) return { ok: false, reason: 'Already listed' }
+    if (listed.length >= maxListed) return { ok: false, reason: `Max listed reached (${maxListed})` }
+    if (willViolateMinOnSell(team, playerId)) return { ok: false, reason: 'Would break minimum squad/role' }
+    return { ok: true }
+  }
   function canBuy(player, fee, buyer) {
     if (!buyer?.finances) return { ok: false, reason: 'No finances' }
     if ((buyer.finances.cash ?? 0) < fee) return { ok: false, reason: 'Insufficient cash' }
     if (!canAffordWage(buyer, player.wage)) return { ok: false, reason: 'Wage budget exceeded' }
     if (buyer.players.length >= GAME_CONSTANTS.FINANCE.MAX_SQUAD_SIZE) return { ok: false, reason: 'Squad size limit' }
+    if (wouldExceedMaxOnBuy(buyer, player)) return { ok: false, reason: 'Would exceed per-role max' }
     return { ok: true }
   }
 
@@ -133,10 +191,15 @@ export function MarketProvider({ children }) {
       if (myIdx < 0) return s
       const { player } = findPlayerById(playerId, s)
       if (!player) return s
+      const buyer = s.teams[myIdx]
+      const buyCheck = canBuy(player, amount, buyer)
+      if (!buyCheck.ok) return s
       const neg = ensureNegotiations(s)
       const id = crypto.randomUUID?.() || Math.random().toString(36).slice(2)
       const offer = { id, playerId, seller: sellerName, buyer: buyerName, type: 'transfer', amount: Number(amount.toFixed(2)), wage: Number(wage.toFixed(2)), contractLength, team: buyerName, deadlineWeek: s.league.week + 1, status: 'pending' }
-      const pendingOffers = [...neg.pendingOffers, offer]
+      // generate 1-2 competing AI offers
+      const rivals = generateCompetingOffers(playerId, sellerName)
+      const pendingOffers = [...neg.pendingOffers, offer, ...rivals]
       return { ...s, negotiations: { ...neg, pendingOffers } }
     })
     saveNow()
@@ -165,10 +228,24 @@ export function MarketProvider({ children }) {
       const buyerName = s.teamName
       const player = (s.freeAgents || []).find(p => p.id === playerId)
       if (!player) return s
+      const buyer = s.teams.find(t => t.name === buyerName)
+      if (!buyer) return s
+      if (wouldExceedMaxOnBuy(buyer, player)) return s
+      if (!canAffordWage(buyer, wage)) return s
       const neg = ensureNegotiations(s)
       const id = crypto.randomUUID?.() || Math.random().toString(36).slice(2)
       const offer = { id, playerId, seller: null, buyer: buyerName, type: 'free', amount: 0, wage: Number(wage.toFixed(2)), contractLength, team: buyerName, deadlineWeek: s.league.week + 1, status: 'pending' }
-      const pendingOffers = [...neg.pendingOffers, offer]
+      // simulate competing AI bids for the free agent
+      const teams = (s.teams || []).filter(t => t.name !== buyerName).map(t => t.name)
+      const max = Math.min(2, teams.length)
+      const rivals = []
+      for (let i = 0; i < max; i++) {
+        const idx = Math.floor(Math.random() * teams.length)
+        const buyerR = teams.splice(idx, 1)[0]
+        const w = Number((player.wage * (0.95 + Math.random() * 0.3)).toFixed(2))
+        rivals.push({ id: (crypto.randomUUID?.() || Math.random().toString(36).slice(2)), playerId, seller: null, buyer: buyerR, type: 'free', amount: 0, wage: w, contractLength: 2 + Math.floor(Math.random()*3), team: buyerR, deadlineWeek: s.league.week + 1, status: 'pending', ai: true })
+      }
+      const pendingOffers = [...neg.pendingOffers, offer, ...rivals]
       return { ...s, negotiations: { ...neg, pendingOffers } }
     })
     saveNow()
@@ -187,7 +264,18 @@ export function MarketProvider({ children }) {
       const buyer = ensureTeamMarketFinances(s.teams[buyerIdx])
       const player = seller.players.find(p => p.id === offer.playerId)
       if (!player) return s
-      const check = canBuy(player, offer.amount, buyer)
+      // if buyer cannot afford wages, try a simple wage counter down to available headroom (min 0.8x player's wage)
+      let effWage = offer.wage
+      const budget = buyer.finances?.wageBudget || GAME_CONSTANTS.FINANCE.INITIAL_WAGE_BUDGET
+      const current = buyer.players.reduce((sum, p) => sum + (p.wage || 0), 0)
+      const headroom = Math.max(0, budget - current)
+      if (effWage > headroom) {
+        const minAcceptable = Math.max(player.wage * (GAME_CONSTANTS.FINANCE.NEGOTIATION_RANGES?.WAGES?.MIN_ACCEPTABLE || 0.8), GAME_CONSTANTS.FINANCE.MIN_PLAYER_WAGE || 0.01)
+        if (headroom >= minAcceptable) {
+          effWage = Number(headroom.toFixed(2))
+        }
+      }
+      const check = canBuy({ ...player, wage: effWage }, offer.amount, buyer)
       if (!check.ok) {
         // mark rejected due to affordability
         const pendingOffers = neg.pendingOffers.map(o => o.id === offerId ? { ...o, status: 'rejected' } : o)
@@ -196,7 +284,7 @@ export function MarketProvider({ children }) {
       const buyerFin = { ...buyer.finances, cash: Number(((buyer.finances.cash || 0) - offer.amount).toFixed(GAME_CONSTANTS.FINANCE.DECIMAL_PLACES)) }
       const sellerFin = { ...seller.finances, cash: Number(((seller.finances.cash || 0) + offer.amount).toFixed(GAME_CONSTANTS.FINANCE.DECIMAL_PLACES)) }
       const nextSellerPlayers = seller.players.filter(pp => pp.id !== offer.playerId)
-      const nextBuyerPlayers = [...buyer.players, { ...player, starting: false }]
+      const nextBuyerPlayers = [...buyer.players, { ...player, starting: false, wage: effWage }]
       const nextSellerListings = seller.finances.playersForSale.filter(e => e.id !== offer.playerId)
       const teams = [...s.teams]
       teams[sellerIdx] = { ...seller, finances: { ...sellerFin, playersForSale: nextSellerListings }, players: nextSellerPlayers }
@@ -378,7 +466,9 @@ export function MarketProvider({ children }) {
           if (!canAffordWage(buyer, best.wage)) return
           // Accept chance rises with wage vs player's wage
           const rel = (best.wage / Math.max(0.01, player.wage))
-          const pAccept = Math.min(0.95, 0.5 + (rel - ranges.WAGES.PREFERRED) * 0.8)
+          // harder for stars, easier for average
+          const starBias = player.overall >= 86 ? -0.1 : player.overall >= 80 ? -0.05 : player.overall <= 65 ? +0.05 : 0
+          const pAccept = Math.min(0.95, Math.max(0.05, 0.5 + (rel - (ranges.WAGES.PREFERRED || 1.0)) * 0.8 + starBias))
           if (Math.random() < pAccept) {
             // finalize
             const nextFA = (next.freeAgents || []).filter(p => p.id !== pid)
@@ -401,7 +491,8 @@ export function MarketProvider({ children }) {
           const askingEntry = (seller.finances.playersForSale || []).find(e => e.id === pid)
           const asking = askingEntry?.asking ?? player.value
           const feeRel = best.amount / Math.max(0.01, asking)
-          const pAccept = Math.min(0.95, 0.4 + (feeRel - ranges.TRANSFER_FEE.PREFERRED) * 0.8)
+          const starBias = player.overall >= 86 ? -0.1 : player.overall >= 80 ? -0.05 : player.overall <= 65 ? +0.05 : 0
+          const pAccept = Math.min(0.95, Math.max(0.05, 0.4 + (feeRel - (ranges.TRANSFER_FEE.PREFERRED || 1.0)) * 0.8 + starBias))
           const can = canBuy(player, best.amount, buyer)
           if (can.ok && Math.random() < pAccept) {
             const buyerFin = { ...buyer.finances, cash: Number(((buyer.finances.cash || 0) - best.amount).toFixed(GAME_CONSTANTS.FINANCE.DECIMAL_PLACES)) }
@@ -431,7 +522,11 @@ export function MarketProvider({ children }) {
     aggregateTransferList,
     findPlayerById,
     canAffordWage,
+    wageWarning,
     canBuy,
+    wouldExceedMaxOnBuy,
+    willViolateMinOnSell,
+    canListWithReason,
     signFreeAgent,
     listPlayer,
     unlistPlayer,

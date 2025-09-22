@@ -268,11 +268,18 @@ export default function Squad() {
                             <td style={{ textAlign: 'left', padding: '4px 6px' }}>{(Array.isArray(p.roles) && p.roles.length ? p.roles : [p.primaryRole]).join('/')}</td>
                             <td style={{ textAlign: 'left', padding: '4px 6px' }} className="value" data-value={p.overall}>{p.overall}</td>
                             <td style={{ textAlign: 'left', padding: '4px 6px' }}>
-                              {!team.finances?.playersForSale?.some(e => e.id === p.id) ? (
-                                <button onClick={() => market.listPlayer(p.id, p.value)}>List</button>
-                              ) : (
-                                <button onClick={() => market.unlistPlayer(p.id)}>Unlist</button>
-                              )}
+                              {(() => {
+                                const listed = team.finances?.playersForSale?.some(e => e.id === p.id)
+                                if (!listed) {
+                                  const can = market.canListWithReason?.(team, p.id) || { ok: true }
+                                  return (
+                                    <button title={can.ok ? '' : can.reason} disabled={!can.ok} onClick={() => { if (confirm(`List ${p.name} for sale at €${p.value.toFixed(2)}M?`)) market.listPlayer(p.id, p.value) }}>List</button>
+                                  )
+                                }
+                                return (
+                                  <button onClick={() => { if (confirm(`Unlist ${p.name} from sale?`)) market.unlistPlayer(p.id) }}>Unlist</button>
+                                )
+                              })()}
                             </td>
                             {headerSet.map(h => (
                               <td key={h.key} className="stat-col value" style={{ textAlign: 'left', padding: '4px 6px' }}>{p.stats[h.key] ?? p[h.key]}</td>
