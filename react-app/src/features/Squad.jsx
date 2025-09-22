@@ -66,8 +66,8 @@ export default function Squad() {
     const i = next.findIndex(p => String(p.id) === String(playerId))
     if (i === -1) return
     const p = next[i]
-    if (p.section !== sec) return // enforce section match
-    // Enforce natural role for this slot
+    // Enforce section AND natural role for this slot
+    if (p.section !== sec) return
     const slot = positions[sec][index]
     if (slot && Array.isArray(slot.natural)) {
       if (!slot.natural.includes(p.primaryRole)) return
@@ -98,6 +98,10 @@ export default function Squad() {
       // Clear previous slot of this player, if any
       if (p.slot) {
         p.slot = undefined
+      }
+      // Clear bench assignment if coming from bench
+      if (typeof p.benchIndex === 'number') {
+        p.benchIndex = undefined
       }
       p.starting = true
       p.slot = { section: sec, index }
@@ -135,6 +139,51 @@ export default function Squad() {
     updateTeam(next, f)
   }
 
+  function assignToBench(playerId, benchIndex) {
+    const next = players.map(p => ({ ...p }))
+    const i = next.findIndex(p => String(p.id) === String(playerId))
+    if (i === -1) return
+    const p = next[i]
+    // Only one GK allowed on bench
+    if (p.primaryRole === 'GK') {
+      const gksOnBench = next.filter(pp => pp.benchIndex !== undefined && pp.primaryRole === 'GK' && String(pp.id) !== String(p.id))
+      if (gksOnBench.length >= 1) {
+        setFlash({ type: 'bench', idx: benchIndex })
+        setTimeout(() => setFlash(null), 600)
+        return
+      }
+    }
+    // If bench slot occupied, swap with that player (move to previous location)
+    const occIdx = next.findIndex(x => x.benchIndex === benchIndex)
+    const prevBenchIndex = typeof p.benchIndex === 'number' ? p.benchIndex : undefined
+    const fromSlot = p.slot ? { ...p.slot } : null
+    if (occIdx !== -1) {
+      const other = next[occIdx]
+      // Move other to p's previous place (bench or slot)
+      if (prevBenchIndex !== undefined) {
+        other.benchIndex = prevBenchIndex
+      } else if (fromSlot) {
+        other.slot = { ...fromSlot }
+        other.starting = true
+      } else {
+        other.benchIndex = undefined
+        other.starting = false
+        other.slot = undefined
+      }
+    }
+    // Move p to bench
+    p.benchIndex = benchIndex
+    p.starting = false
+    p.slot = undefined
+    updateTeam(next)
+  }
+
+  function clearBench(benchIndex) {
+    const next = players.map(p => ({ ...p }))
+    const occIdx = next.findIndex(x => x.benchIndex === benchIndex)
+    if (occIdx !== -1) { next[occIdx].benchIndex = undefined; updateTeam(next) }
+  }
+
   return (
     <div className="card">
       <div className="row2" style={{ alignItems: 'end' }}>
@@ -170,8 +219,12 @@ export default function Squad() {
                 </thead>
                 <tbody>
                   {players.filter(p => p.section === sec).map(p => (
-                    <tr key={p.id} draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', p.id) }} title="Drag to field or bench">
-                      <td>{p.name}{p.slot ? ' • XI' : (p.benchIndex !== undefined ? ' • Bench' : '')}</td>
+                    <tr key={p.id}
+                        draggable
+                        onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', p.id) }}
+                        title="Drag to field or bench"
+                        style={{ background: p.slot ? 'rgba(34,197,94,0.15)' : (p.benchIndex !== undefined ? 'rgba(239,68,68,0.12)' : undefined) }}>
+                      <td>#{p.number} {p.name}</td>
                       <td>{p.primaryRole}</td>
                       <td className="value" data-value={p.overall}>{p.overall}</td>
                       <td className="value">{p.stats.pass}</td>
@@ -188,12 +241,12 @@ export default function Squad() {
         </div>
 
         {/* Middle: field with DnD positions */}
-        <div className="table-container" style={{ flex: '1 1 50%' }}>
+        <div className="table-container" style={{ flex: '1 1 55%' }}>
           <h3>Starting XI — drag players here</h3>
           <div style={{
             position: 'relative',
-            width: 700,
-            height: 1100,
+            width: 640,
+            height: 1000,
             background: `url(${fieldImg}) center/cover no-repeat`,
             borderRadius: 12,
             border: '1px solid var(--border)'
@@ -207,8 +260,9 @@ export default function Squad() {
                   const id = e.dataTransfer.getData('text/plain')
                   if (id) assignToSlot(id, sec, idx)
                 }
+                const slotSize = 80
                 return (
-                  <div key={slotKey} style={{ position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)', width: 140 }}>
+                  <div key={slotKey} style={{ position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)', width: slotSize }}>
                     <div
                       onDragEnter={(e)=>{
                         const id = e.dataTransfer.getData('text/plain')
@@ -239,13 +293,19 @@ export default function Squad() {
                         borderStyle: occupant ? 'solid' : 'dashed',
                         borderColor: (flash && flash.type==='slot' && flash.sec===sec && flash.idx===idx) ? '#dc2626' : (
                           occupant && occupant.slot?.oop ? '#f59e0b' : (hover && hover.sec === sec && hover.idx === idx ? (hover.valid ? 'var(--border)' : '#dc2626') : 'var(--border)')
-                        )
+                        ),
+                        width: slotSize,
+                        height: slotSize,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center'
                       }}
                     >
                       {occupant ? (
                         <div draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', occupant.id) }}>
-                          <div style={{ fontWeight: 700 }}>{occupant.name}</div>
-                          <div style={{ fontSize: 12, opacity: 0.9 }}>{occupant.primaryRole} · OVR {occupant.overall}{occupant.slot?.oop ? ' • Out of position' : ''}</div>
+                          <div style={{ fontWeight: 700 }}>#{occupant.number}</div>
+                          <div style={{ fontSize: 12, opacity: 0.9 }}>{occupant.primaryRole} · {occupant.name}</div>
                           <button className="btn-warn" style={{ marginTop: 6, width: 'auto' }} onClick={()=>clearSlot(sec, idx)}>Remove</button>
                         </div>
                       ) : (
@@ -262,7 +322,7 @@ export default function Squad() {
         </div>
 
         {/* Right: bench (7 slots) */}
-        <div className="table-container" style={{ flex: '1 1 25%' }}>
+        <div className="table-container" style={{ flex: '1 1 20%' }}>
           <h3>Bench (7)</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
             {Array.from({ length: 7 }).map((_, i) => {
@@ -272,11 +332,11 @@ export default function Squad() {
                      className="card"
                      onDragOver={(e)=> e.preventDefault()}
                      onDrop={(e)=>{ const id = e.dataTransfer.getData('text/plain'); if (id) assignToBench(id, i) }}
-                     style={{ padding: 8, minHeight: 60, background: bOcc ? 'rgba(147,197,253,0.15)' : 'rgba(0,0,0,0.25)', borderColor: (flash && flash.type==='bench' && flash.idx===i) ? '#dc2626' : 'var(--border)' }}>
+                     style={{ padding: 8, background: bOcc ? 'rgba(239,68,68,0.12)' : 'rgba(0,0,0,0.25)', borderColor: (flash && flash.type==='bench' && flash.idx===i) ? '#dc2626' : 'var(--border)', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {bOcc ? (
                     <div draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', bOcc.id) }}>
-                      <div style={{ fontWeight: 700 }}>{bOcc.name}</div>
-                      <div style={{ fontSize: 12, opacity: 0.9 }}>{bOcc.primaryRole} · OVR {bOcc.overall}</div>
+                      <div style={{ fontWeight: 700 }}>#{bOcc.number}</div>
+                      <div style={{ fontSize: 12, opacity: 0.9 }}>{bOcc.primaryRole} · {bOcc.name}</div>
                       <button className="btn-warn" style={{ marginTop: 6, width: 'auto' }} onClick={()=>clearBench(i)}>Remove</button>
                     </div>
                   ) : (
