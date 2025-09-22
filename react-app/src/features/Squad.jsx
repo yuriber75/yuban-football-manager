@@ -66,28 +66,22 @@ export default function Squad() {
     const i = next.findIndex(p => String(p.id) === String(playerId))
     if (i === -1) return
     const p = next[i]
-    // Enforce section AND natural role for this slot
+    // Enforce section only; allow out-of-position with red border indicator
     if (p.section !== sec) return
     const slot = positions[sec][index]
-    if (slot && Array.isArray(slot.natural)) {
-      if (!slot.natural.includes(p.primaryRole)) return
-    }
+    const isOOP = Array.isArray(slot?.natural) ? !slot.natural.includes(p.primaryRole) : false
     // Determine if target occupied
     const targetOccIdx = next.findIndex(x => x.slot && x.slot.section === sec && x.slot.index === index)
     const fromSlot = p.slot ? { ...p.slot } : null
     if (fromSlot && targetOccIdx !== -1) {
       // Swap occupants between slots (same section)
       const targetPlayer = next[targetOccIdx]
-      // Validate target player's natural fit in fromSlot
+      // Compute target player's OOP status for the original slot
       const fromSlotDef = positions[fromSlot.section][fromSlot.index]
-      if (fromSlotDef && Array.isArray(fromSlotDef.natural)) {
-        if (!fromSlotDef.natural.includes(targetPlayer.primaryRole)) {
-          return // cannot swap if target doesn't fit the original slot
-        }
-      }
-      targetPlayer.slot = { section: fromSlot.section, index: fromSlot.index }
+      const targetOOP = Array.isArray(fromSlotDef?.natural) ? !fromSlotDef.natural.includes(targetPlayer.primaryRole) : false
+      targetPlayer.slot = { section: fromSlot.section, index: fromSlot.index, oop: targetOOP }
       targetPlayer.starting = true
-      p.slot = { section: sec, index }
+      p.slot = { section: sec, index, oop: isOOP }
       p.starting = true
     } else {
       // Move player into target slot (clear target occupant if any)
@@ -104,7 +98,7 @@ export default function Squad() {
         p.benchIndex = undefined
       }
       p.starting = true
-      p.slot = { section: sec, index }
+      p.slot = { section: sec, index, oop: isOOP }
     }
     updateTeam(next)
   }
@@ -267,13 +261,15 @@ export default function Squad() {
                       onDragEnter={(e)=>{
                         const id = e.dataTransfer.getData('text/plain')
                         let valid = false
+                        let oop = false
                         if (id) {
                           const pl = players.find(pp => String(pp.id) === String(id))
                           const natural = positions[sec][idx]?.natural || []
-                          // Strict: require section and natural position match
-                          valid = !!pl && pl.section === sec && natural.includes(pl.primaryRole)
+                          // Allow within section; mark OOP if role not natural for this slot
+                          valid = !!pl && pl.section === sec
+                          oop = !!pl && pl.section === sec && !natural.includes(pl.primaryRole)
                         }
-                        setHover({ sec, idx, valid })
+                        setHover({ sec, idx, valid, oop })
                       }}
                       onDragOver={(e)=>{
                         e.preventDefault()
@@ -292,24 +288,33 @@ export default function Squad() {
                         background: occupant ? 'rgba(34,197,94,0.2)' : 'rgba(0,0,0,0.35)',
                         borderStyle: occupant ? 'solid' : 'dashed',
                         borderColor: (flash && flash.type==='slot' && flash.sec===sec && flash.idx===idx) ? '#dc2626' : (
-                          occupant && occupant.slot?.oop ? '#f59e0b' : (hover && hover.sec === sec && hover.idx === idx ? (hover.valid ? 'var(--border)' : '#dc2626') : 'var(--border)')
+                          occupant && occupant.slot?.oop ? '#dc2626' : (hover && hover.sec === sec && hover.idx === idx ? (hover.valid ? (hover.oop ? '#dc2626' : 'var(--border)') : '#dc2626') : 'var(--border)')
                         ),
                         width: slotSize,
                         height: slotSize,
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
-                        justifyContent: 'center'
+                        justifyContent: 'center',
+                        position: 'relative'
                       }}
                     >
                       {occupant ? (
                         <div draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', occupant.id) }}>
-                          <div style={{ fontWeight: 700 }}>#{occupant.number}</div>
-                          <div style={{ fontSize: 12, opacity: 0.9 }}>{occupant.primaryRole} · {occupant.name}</div>
+                          <div style={{ fontSize: 12, opacity: 0.9 }}>{occupant.primaryRole}</div>
+                          <div style={{ fontWeight: 700 }}>{occupant.name}</div>
+                          <div style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.65)', color: '#fff', borderRadius: 10, padding: '2px 6px', fontSize: 12, lineHeight: 1 }}>
+                            #{occupant.number}
+                          </div>
                           <button className="btn-warn" style={{ marginTop: 6, width: 'auto' }} onClick={()=>clearSlot(sec, idx)}>Remove</button>
                         </div>
                       ) : (
-                        <div style={{ color: 'var(--muted)' }}>Drag here ({sec})</div>
+                        <div style={{ color: 'var(--muted)' }}>
+                          {(() => {
+                            const naturals = positions[sec][idx]?.natural || []
+                            return naturals.length ? naturals.join('/') : sec
+                          })()}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -332,15 +337,18 @@ export default function Squad() {
                      className="card"
                      onDragOver={(e)=> e.preventDefault()}
                      onDrop={(e)=>{ const id = e.dataTransfer.getData('text/plain'); if (id) assignToBench(id, i) }}
-                     style={{ padding: 8, background: bOcc ? 'rgba(239,68,68,0.12)' : 'rgba(0,0,0,0.25)', borderColor: (flash && flash.type==='bench' && flash.idx===i) ? '#dc2626' : 'var(--border)', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                     style={{ padding: 8, background: bOcc ? 'rgba(239,68,68,0.12)' : 'rgba(0,0,0,0.25)', borderColor: (flash && flash.type==='bench' && flash.idx===i) ? '#dc2626' : 'var(--border)', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                   {bOcc ? (
                     <div draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', bOcc.id) }}>
-                      <div style={{ fontWeight: 700 }}>#{bOcc.number}</div>
-                      <div style={{ fontSize: 12, opacity: 0.9 }}>{bOcc.primaryRole} · {bOcc.name}</div>
+                      <div style={{ fontSize: 12, opacity: 0.9 }}>{bOcc.primaryRole}</div>
+                      <div style={{ fontWeight: 700 }}>{bOcc.name}</div>
+                      <div style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.65)', color: '#fff', borderRadius: 10, padding: '2px 6px', fontSize: 12, lineHeight: 1 }}>
+                        #{bOcc.number}
+                      </div>
                       <button className="btn-warn" style={{ marginTop: 6, width: 'auto' }} onClick={()=>clearBench(i)}>Remove</button>
                     </div>
                   ) : (
-                    <div style={{ color: 'var(--muted)' }}>Drag here (Bench)</div>
+                    <div style={{ color: 'var(--muted)' }}>Bench</div>
                   )}
                 </div>
               )
