@@ -16,6 +16,22 @@ function requiredCounts(formation) {
   return { GK: 1, DF: f.DF, MF: f.MF, FW: f.FW }
 }
 
+function sectionAccent(sec) {
+  // Solid and translucent accents per section for modern styling
+  switch (sec) {
+    case 'GK':
+      return { solid: '#7c3aed', translucent: 'rgba(124,58,237,0.16)', text: '#4c1d95' }
+    case 'DF':
+      return { solid: '#3b82f6', translucent: 'rgba(59,130,246,0.16)', text: '#1d4ed8' }
+    case 'MF':
+      return { solid: '#22c55e', translucent: 'rgba(34,197,94,0.16)', text: '#15803d' }
+    case 'FW':
+      return { solid: '#f97316', translucent: 'rgba(249,115,22,0.18)', text: '#c2410c' }
+    default:
+      return { solid: 'var(--border)', translucent: 'rgba(0,0,0,0.1)', text: '#0f172a' }
+  }
+}
+
 export default function Squad() {
   const { state, setState, saveNow } = useGameState()
   const team = state.teams.find(t => t.name === state.teamName)
@@ -287,11 +303,23 @@ export default function Squad() {
                       style={{
                         padding: 8,
                         textAlign: 'center',
-                        background: occupant ? '#ffffff' : 'rgba(0,0,0,0.15)',
+                        background: occupant ? undefined : 'rgba(0,0,0,0.15)',
+                        backgroundImage: occupant ? (()=>{
+                          const occSec = occupant ? roleSection(occupant.primaryRole) : sec
+                          const acc = sectionAccent(occSec)
+                          return `linear-gradient(135deg, ${acc.translucent} 0%, rgba(0,0,0,0) 60%), #ffffff`
+                        })() : undefined,
                         borderStyle: occupant ? 'solid' : 'dashed',
-                        borderColor: (flash && flash.type==='slot' && flash.sec===sec && flash.idx===idx) ? '#dc2626' : (
-                          occupant && occupant.slot?.oop ? '#dc2626' : (hover && hover.sec === sec && hover.idx === idx ? (hover.valid ? (hover.oop ? '#dc2626' : 'var(--border)') : '#dc2626') : 'var(--border)')
-                        ),
+                        borderColor: (()=>{
+                          if (flash && flash.type==='slot' && flash.sec===sec && flash.idx===idx) return '#dc2626'
+                          if (occupant) {
+                            if (occupant.slot?.oop) return '#dc2626'
+                            const occSec = roleSection(occupant.primaryRole)
+                            return sectionAccent(occSec).solid
+                          }
+                          if (hover && hover.sec === sec && hover.idx === idx) return (hover.valid ? (hover.oop ? '#dc2626' : 'var(--border)') : '#dc2626')
+                          return 'var(--border)'
+                        })(),
                         width: slotSize,
                         height: slotSize,
                         display: 'flex',
@@ -300,16 +328,24 @@ export default function Squad() {
                         justifyContent: 'center',
                         position: 'relative',
                         cursor: occupant ? 'pointer' : 'default',
-                        boxShadow: occupant ? '0 2px 8px rgba(0,0,0,0.25)' : undefined,
-                        color: occupant ? '#0f172a' : undefined
+                        boxShadow: occupant ? '0 6px 16px rgba(0,0,0,0.25)' : undefined,
+                        color: occupant ? '#0f172a' : undefined,
+                        borderWidth: occupant ? 2 : 1,
+                        borderRadius: 10
                       }}
                       onClick={() => { if (occupant) clearSlot(sec, idx) }}
                     >
                       {occupant ? (
                         <div draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', occupant.id) }}>
-                          <div style={{ fontSize: 12, opacity: 0.9, color: occupant.slot?.oop ? '#b91c1c' : '#0369a1' }}>{occupant.primaryRole}</div>
-                          <div style={{ fontWeight: 700 }}>{occupant.name}</div>
-                          <div style={{ fontSize: 12, opacity: 0.9 }}>OVR {Math.round(occupant.overall * (occupant.slot?.oop ? 0.9 : 1))}</div>
+                          {(() => { const secTag = roleSection(occupant.primaryRole); const acc = sectionAccent(secTag); return (
+                            <div style={{ position: 'absolute', top: 6, left: 6, background: occupant.slot?.oop ? '#fee2e2' : acc.solid, color: occupant.slot?.oop ? '#991b1b' : '#fff', borderRadius: 9999, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>
+                              {occupant.primaryRole}
+                            </div>
+                          ) })()}
+                          <div style={{ fontWeight: 800, marginTop: 16 }}>{occupant.name}</div>
+                          <div style={{ position: 'absolute', bottom: 6, left: 6, borderRadius: 9999, padding: '2px 8px', fontSize: 11, fontWeight: 700, border: `1px solid ${sectionAccent(roleSection(occupant.primaryRole)).solid}`, color: sectionAccent(roleSection(occupant.primaryRole)).text, background: sectionAccent(roleSection(occupant.primaryRole)).translucent }}>
+                            OVR {Math.round(occupant.overall * (occupant.slot?.oop ? 0.9 : 1))}
+                          </div>
                           <div style={{ position: 'absolute', top: -6, right: -6, background: '#facc15', color: '#000', borderRadius: '9999px', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, lineHeight: 1, fontWeight: 800, boxShadow: '0 2px 6px rgba(0,0,0,0.25)' }}>
                             #{occupant.number}
                           </div>
@@ -344,12 +380,18 @@ export default function Squad() {
                      onDragOver={(e)=> e.preventDefault()}
                      onDrop={(e)=>{ const id = e.dataTransfer.getData('text/plain'); if (id) assignToBench(id, i) }}
                      onClick={() => { if (bOcc) clearBench(i) }}
-                     style={{ padding: 8, background: bOcc ? '#ffffff' : 'rgba(0,0,0,0.15)', borderColor: (flash && flash.type==='bench' && flash.idx===i) ? '#dc2626' : 'var(--border)', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: bOcc ? 'pointer' : 'default', boxShadow: bOcc ? '0 2px 8px rgba(0,0,0,0.25)' : undefined }}>
+                     style={{ padding: 8, background: bOcc ? undefined : 'rgba(0,0,0,0.15)', borderColor: (flash && flash.type==='bench' && flash.idx===i) ? '#dc2626' : 'var(--border)', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: bOcc ? 'pointer' : 'default', boxShadow: bOcc ? '0 6px 16px rgba(0,0,0,0.25)' : undefined, borderWidth: bOcc ? 2 : 1, borderRadius: 10, backgroundImage: bOcc ? (()=>{ const acc = sectionAccent(roleSection(bOcc.primaryRole)); return `linear-gradient(135deg, ${acc.translucent} 0%, rgba(0,0,0,0) 60%), #ffffff`; })() : undefined, borderStyle: 'solid' }}>
                   {bOcc ? (
                     <div draggable onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', bOcc.id) }}>
-                      <div style={{ fontSize: 12, opacity: 0.9, color: '#7c2d12' }}>{bOcc.primaryRole}</div>
-                      <div style={{ fontWeight: 700, color: '#1f2937' }}>{bOcc.name}</div>
-                      <div style={{ fontSize: 12, opacity: 0.9 }}>OVR {bOcc.overall}</div>
+                      {(() => { const secTag = roleSection(bOcc.primaryRole); const acc = sectionAccent(secTag); return (
+                        <div style={{ position: 'absolute', top: 6, left: 6, background: acc.solid, color: '#fff', borderRadius: 9999, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>
+                          {bOcc.primaryRole}
+                        </div>
+                      ) })()}
+                      <div style={{ fontWeight: 800, marginTop: 16, color: '#0f172a' }}>{bOcc.name}</div>
+                      <div style={{ position: 'absolute', bottom: 6, left: 6, borderRadius: 9999, padding: '2px 8px', fontSize: 11, fontWeight: 700, border: `1px solid ${sectionAccent(roleSection(bOcc.primaryRole)).solid}`, color: sectionAccent(roleSection(bOcc.primaryRole)).text, background: sectionAccent(roleSection(bOcc.primaryRole)).translucent }}>
+                        OVR {bOcc.overall}
+                      </div>
                       <div style={{ position: 'absolute', top: -6, right: -6, background: '#facc15', color: '#000', borderRadius: '9999px', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, lineHeight: 1, fontWeight: 800, boxShadow: '0 2px 6px rgba(0,0,0,0.25)' }}>
                         #{bOcc.number}
                       </div>
