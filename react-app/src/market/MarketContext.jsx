@@ -250,14 +250,16 @@ export function MarketProvider({ children }) {
     const s = state
     const teams = (s.teams || []).map(t => t.name)
     const pool = teams.filter(n => n !== s.teamName && n !== sellerName)
-    const max = Math.min(2, pool.length)
+    // Vanilla-like: typically 1, sometimes 2 competing offers
+    const max = Math.min((Math.random() < 0.3 ? 2 : 1), pool.length)
     const { player } = findPlayerById(playerId, s)
     if (!player) return offers
     for (let i = 0; i < max; i++) {
       const idx = Math.floor(Math.random() * pool.length)
       const buyer = pool.splice(idx, 1)[0]
-      const amountVar = 0.9 + Math.random() * 0.3 // 0.9..1.2 × value as proxy
-      const wageVar = 0.9 + Math.random() * 0.3
+      // Tighter around asking/wage to feel more grounded
+      const amountVar = 0.92 + Math.random() * 0.2 // 0.92..1.12 × value as proxy
+      const wageVar = 0.95 + Math.random() * 0.18 // 0.95..1.13 × wage
       offers.push({ id: (crypto.randomUUID?.() || Math.random().toString(36).slice(2)), playerId, seller: sellerName, buyer, type: 'transfer', amount: Number((player.value * amountVar).toFixed(2)), wage: Number((player.wage * wageVar).toFixed(2)), contractLength: 2 + Math.floor(Math.random() * 3), team: buyer, deadlineWeek: s.league.week + 1, status: 'pending', ai: true })
     }
     return offers
@@ -277,12 +279,12 @@ export function MarketProvider({ children }) {
       const offer = { id, playerId, seller: null, buyer: buyerName, type: 'free', amount: 0, wage: Number(wage.toFixed(2)), contractLength, team: buyerName, deadlineWeek: s.league.week + 1, status: 'pending' }
       // simulate competing AI bids for the free agent
       const teams = (s.teams || []).filter(t => t.name !== buyerName).map(t => t.name)
-      const max = Math.min(2, teams.length)
+      const max = Math.min((Math.random() < 0.3 ? 2 : 1), teams.length)
       const rivals = []
       for (let i = 0; i < max; i++) {
         const idx = Math.floor(Math.random() * teams.length)
         const buyerR = teams.splice(idx, 1)[0]
-        const w = Number((player.wage * (0.95 + Math.random() * 0.3)).toFixed(2))
+        const w = Number((player.wage * (0.96 + Math.random() * 0.22)).toFixed(2))
         rivals.push({ id: (crypto.randomUUID?.() || Math.random().toString(36).slice(2)), playerId, seller: null, buyer: buyerR, type: 'free', amount: 0, wage: w, contractLength: 2 + Math.floor(Math.random()*3), team: buyerR, deadlineWeek: s.league.week + 1, status: 'pending', ai: true })
       }
       const pendingOffers = [...neg.pendingOffers, offer, ...rivals]

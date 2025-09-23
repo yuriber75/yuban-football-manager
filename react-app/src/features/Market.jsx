@@ -53,8 +53,10 @@ export default function Market() {
               {state.freeAgents.map((p) => {
                 const cfg = faBid[p.id] || { wage: p.wage, len: 2 }
                 const warn = market.wageWarning(myTeam, cfg.wage)
-                const disabled = !market.canAffordWage(myTeam, cfg.wage) || market.wouldExceedMaxOnBuy?.(myTeam, p)
-                const title = disabled ? (!market.canAffordWage(myTeam, cfg.wage) ? 'Wage budget exceeded' : 'Would exceed per-role max') : (warn ? 'Warning: near wage cap' : '')
+                const afford = market.canAffordWage(myTeam, cfg.wage)
+                const exceedRole = market.wouldExceedMaxOnBuy?.(myTeam, p)
+                const disabled = !afford || exceedRole
+                const title = disabled ? (!afford ? 'Wage budget exceeded (with pending offers)' : 'Would exceed per-role max') : (warn ? 'Warning: near wage cap' : '')
                 const money = (v) => formatMillions(v, { decimals: 2 })
                 return (
                 <tr key={p.id}>
@@ -100,7 +102,7 @@ export default function Market() {
                 const { player } = market.findPlayerById(e.playerId, state) || {}
                 if (!player) return null
                 const cfg = tlBid[player.id] || { fee: e.asking, wage: player.wage, len: 3 }
-                const check = market.canBuy(player, cfg.fee, myTeam)
+                const check = market.canBuy(player, cfg.fee, myTeam, { wage: cfg.wage })
                 const warn = market.wageWarning(myTeam, cfg.wage)
                 const money = (v) => formatMillions(v, { decimals: 2 })
                 return (
