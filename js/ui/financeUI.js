@@ -220,6 +220,14 @@ processInitialFinances: function() {
             // Update Squad Wages Table
             this.updateSquadWagesTable(myTeam);
 
+            // Render Sponsor Brands if container exists
+            const brandEl = document.getElementById('sponsorBrands');
+            if (brandEl) {
+                const techBrand = finances.sponsorTechBrand || 'Tech Sponsor';
+                const shirtBrand = finances.sponsorShirtBrand || 'Shirt Sponsor';
+                brandEl.textContent = `${techBrand} (Tech), ${shirtBrand} (Shirt)`;
+            }
+
         } catch (error) {
             console.error('Error updating finance view:', error);
         }

@@ -11,28 +11,50 @@ function shuffle(arr) {
 }
 
 function createRoundRobinFixtures(teams) {
-  // Simple round-robin, one leg
+  // Double round-robin (home and away), circle method
+  // Handles odd team count via BYE padding
   const fixtures = []
-  const n = teams.length
-  const rounds = n - 1
-  let home = teams.slice(0, n / 2)
-  let away = teams.slice(n / 2).reverse()
+  const teamList = [...teams]
+  const names = teamList.map(t => t.name)
+  const isOdd = names.length % 2 === 1
+  if (isOdd) names.push('__BYE__')
+  const n = names.length
+  const half = n / 2
+  const rounds = n - 1 // number of weeks per leg
 
-  for (let r = 0; r < rounds; r++) {
-    const week = []
-    for (let i = 0; i < home.length; i++) {
-      week.push({ home: home[i].name, away: away[i].name })
-    }
-    fixtures.push(week)
-    // rotate
-    if (n > 2) {
-      const fixed = home[0]
-      const arr = [...home.slice(1), ...away]
-      arr.unshift(arr.pop())
-      home = [fixed, ...arr.slice(0, arr.length / 2 - 0)]
-      away = arr.slice(arr.length / 2).reverse()
+  let left = names.slice(0, half)
+  let right = names.slice(half).reverse()
+
+  const buildLeg = (swapHomeAway = false) => {
+    for (let r = 0; r < rounds; r++) {
+      const week = []
+      for (let i = 0; i < half; i++) {
+        const a = left[i]
+        const b = right[i]
+        if (a === '__BYE__' || b === '__BYE__') continue
+        const home = swapHomeAway ? b : a
+        const away = swapHomeAway ? a : b
+        week.push({ home, away })
+      }
+      fixtures.push(week)
+      // rotate using circle method, keeping left[0] fixed
+      if (n > 2) {
+        const fixed = left[0]
+        const arr = [...left.slice(1), ...right]
+        arr.unshift(arr.pop())
+        left = [fixed, ...arr.slice(0, half - 1)]
+        right = arr.slice(half - 1).reverse()
+      }
     }
   }
+
+  // First leg
+  buildLeg(false)
+  // Reset arrays for second leg rotation
+  left = names.slice(0, half)
+  right = names.slice(half).reverse()
+  // Second leg with inverted venues
+  buildLeg(true)
 
   return fixtures
 }

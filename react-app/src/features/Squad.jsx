@@ -68,11 +68,11 @@ export default function Squad() {
   }
 
   function clearStarters() {
-    updateTeam(players.map(p => ({ ...p, starting: false, slot: undefined })))
+    updateTeam(players.map(p => ({ ...p, starting: false, slot: undefined, benchIndex: undefined })))
   }
 
   function autoPick() {
-    const next = players.map(p => ({ ...p, starting: false, slot: undefined }))
+    const next = players.map(p => ({ ...p, starting: false, slot: undefined, benchIndex: undefined }))
     // helper: pick best by section and assign sequentially to slots
     const pickForSection = (sec) => {
       const slots = positions[sec]
@@ -87,6 +87,20 @@ export default function Squad() {
     pickForSection('DF')
     pickForSection('MF')
     pickForSection('FW')
+    // fill bench: 7 best remaining, max 1 GK
+    const startersIds = new Set(next.filter(p => p.starting).map(p => String(p.id)))
+    const remaining = next.filter(p => !startersIds.has(String(p.id))).sort((a,b)=> b.overall - a.overall)
+    let benchCount = 0
+    let gkOnBench = 0
+    for (const p of remaining) {
+      if (benchCount >= 7) break
+      if (p.primaryRole === 'GK') {
+        if (gkOnBench >= 1) continue
+        gkOnBench++
+      }
+      p.benchIndex = benchCount
+      benchCount++
+    }
     updateTeam(next)
   }
 
@@ -254,7 +268,6 @@ export default function Squad() {
                           <th style={{ textAlign: 'left', padding: '4px 6px' }}>Name</th>
                           <th style={{ textAlign: 'left', padding: '4px 6px' }}>Role</th>
                           <th style={{ textAlign: 'left', padding: '4px 6px' }}>OVR</th>
-                          <th style={{ textAlign: 'left', padding: '4px 6px' }}>Action</th>
                           {headerSet.map(h => (
                             <th key={h.key} className="stat-col" style={{ textAlign: 'left', padding: '4px 6px' }} title={`${h.label}: ${h.tooltip}`}>{h.label}</th>
                           ))}
@@ -266,28 +279,12 @@ export default function Squad() {
                               draggable
                               onDragStart={(e)=>{ e.dataTransfer.setData('text/plain', p.id) }}
                               title="Drag to field or bench"
-                              style={{ background: p.slot ? 'rgba(34,197,94,0.10)' : (p.benchIndex !== undefined ? 'rgba(0,0,0,0.06)' : undefined) }}>
+                              className={p.benchIndex !== undefined ? 'bench-row' : (p.slot ? '' : '')}
+                              style={{ background: p.slot ? 'rgba(34,197,94,0.10)' : undefined }}>
                             <td style={{ textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '4px 6px' }}>#{p.number} {p.name}</td>
                             <td style={{ textAlign: 'left', padding: '4px 6px' }}>{(Array.isArray(p.roles) && p.roles.length ? p.roles : [p.primaryRole]).join('/')}</td>
                             <td style={{ textAlign: 'left', padding: '4px 6px' }} className="value" data-value={p.overall}>{p.overall}</td>
-                            <td style={{ textAlign: 'left', padding: '4px 6px' }}>
-                              {(() => {
-                                const listed = team.finances?.playersForSale?.some(e => e.id === p.id)
-                                const money = (v) => formatMillions(v, { decimals: 2 })
-                                if (!listed) {
-                                  const can = market.canListWithReason?.(team, p.id) || { ok: true }
-                                  return (
-                                    <div>
-                                      <button title={can.ok ? '' : can.reason} disabled={!can.ok} onClick={() => setConfirm({ open: true, message: `List ${p.name} for sale at ${money(p.value)}?`, onConfirm: () => { market.listPlayer(p.id, p.value); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })}>List</button>
-                                      {!can.ok && <span className="hint error">{can.reason}</span>}
-                                    </div>
-                                  )
-                                }
-                                return (
-                                  <button onClick={() => setConfirm({ open: true, message: `Unlist ${p.name} from sale?`, onConfirm: () => { market.unlistPlayer(p.id); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })}>Unlist</button>
-                                )
-                              })()}
-                            </td>
+                            {/* Removed Action (List/Unlist) column for finance parity */}
                             {headerSet.map(h => (
                               <td key={h.key} className="stat-col value" style={{ textAlign: 'left', padding: '4px 6px' }}>{p.stats[h.key] ?? p[h.key]}</td>
                             ))}
@@ -326,8 +323,8 @@ export default function Squad() {
               </select>
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
-              <button className="btn-secondary" onClick={autoPick} style={{ width: 'auto' }}>Auto-pick XI</button>
-              <button className="btn-warn" onClick={clearStarters} style={{ width: 'auto' }}>Clear XI</button>
+              <button className="btn-secondary" onClick={autoPick} style={{ width: 'auto' }}>Autopick</button>
+              <button className="btn-warn" onClick={clearStarters} style={{ width: 'auto' }}>Clear</button>
             </div>
           </div>
           <h3>Starting XI — drag players here</h3>

@@ -23,6 +23,8 @@ window.teamGenerator = {
 
     generateTeamFinances: function() {
         const { FINANCE } = GAME_CONSTANTS;
+        const brands = FINANCE.SPONSOR_BRANDS || [];
+        const pickBrand = () => brands.length ? brands[Math.floor(Math.random() * brands.length)] : null;
         return {
             transferBudget: FINANCE.MIN_TRANSFER_BUDGET + 
                           Math.random() * (FINANCE.MAX_TRANSFER_BUDGET - FINANCE.MIN_TRANSFER_BUDGET),
@@ -32,6 +34,8 @@ window.teamGenerator = {
                         Math.random() * (FINANCE.MAX_SPONSOR_TECH - FINANCE.MIN_SPONSOR_TECH),
             sponsorShirt: FINANCE.MIN_SPONSOR_SHIRT + 
                          Math.random() * (FINANCE.MAX_SPONSOR_SHIRT - FINANCE.MIN_SPONSOR_SHIRT),
+            sponsorTechBrand: pickBrand(),
+            sponsorShirtBrand: pickBrand(),
             stadiumCapacity: Math.floor(FINANCE.MIN_STADIUM_CAPACITY + 
                            Math.random() * (FINANCE.MAX_STADIUM_CAPACITY - FINANCE.MIN_STADIUM_CAPACITY)),
             currentAttendance: FINANCE.INITIAL_ATTENDANCE,

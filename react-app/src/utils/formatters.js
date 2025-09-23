@@ -19,3 +19,14 @@ export function formatMillions(value, { decimals = 2, useSpaces = false, useComm
   if (useSpaces) out = out.replace(/,/g, ' ')
   return `€${out}M`
 }
+
+// Format values expressed in "millions" to thousands of euros explicitly (e.g., 0.050 -> €50k)
+// Useful when game data uses millions-per-week but UI needs €k/week for readability
+export function formatKFromMillions(valueInMillions, { decimals = 0, useSpaces = false, useCommaDecimal = true } = {}) {
+  const m = Number(valueInMillions || 0)
+  const thousands = m * 1000
+  const locale = useCommaDecimal ? 'it-IT' : 'en-US'
+  let out = new Intl.NumberFormat(locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(thousands)
+  if (useSpaces) out = out.replace(/,/g, ' ')
+  return `€${out}k`
+}

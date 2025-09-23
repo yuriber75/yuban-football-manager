@@ -105,6 +105,27 @@ export function MarketProvider({ children }) {
     return { player: null, team: null }
   }
 
+  // Offers utilities — gather and rank current pending offers for a player
+  function getOffersForPlayer(playerId, s = state) {
+    const neg = s.negotiations || { pendingOffers: [] }
+    return (neg.pendingOffers || []).filter(o => o.status === 'pending' && o.playerId === playerId)
+  }
+  function getOfferStatsForPlayer(playerId, s = state) {
+    const offers = getOffersForPlayer(playerId, s)
+    if (!offers.length) return { total: 0, best: null, rankOfMine: null }
+    // Rank according to the same logic used in resolveNegotiations
+    const sample = offers[0]
+    const ranked = offers.slice().sort((a,b)=> {
+      if (sample.type === 'free') {
+        return (b.wage + b.contractLength*0.1) - (a.wage + a.contractLength*0.1)
+      }
+      return (b.amount + b.wage*0.18 + b.contractLength*0.2) - (a.amount + a.wage*0.18 + a.contractLength*0.2)
+    })
+    const best = ranked[0]
+    const myIdx = ranked.findIndex(o => o.buyer === s.teamName)
+    return { total: offers.length, best, rankOfMine: myIdx >= 0 ? (myIdx + 1) : null }
+  }
+
   // Centralized acceptance calculators (React-only parity mirroring vanilla tolerances)
   function acceptanceFA(player, offer, constants = GAME_CONSTANTS.FINANCE) {
     const ranges = constants.NEGOTIATION_RANGES
@@ -126,30 +147,62 @@ export function MarketProvider({ children }) {
                     : player.age <= 32 ? (offer.contractLength >= 2 ? +0.01 : -0.01)
                     : (offer.contractLength >= 1 ? 0 : -0.02))
     const starBias = player.overall >= 86 ? -0.08 : player.overall >= 80 ? -0.04 : player.overall <= 65 ? +0.05 : 0
-    const base = 0.38 + (feeRel - (ranges.TRANSFER_FEE.PREFERRED || 1.0)) * 0.85 + agePref + starBias
+    let base = 0.45 + (feeRel - (ranges.TRANSFER_FEE.PREFERRED || 1.0)) * 0.85 + agePref + starBias
+    // Small premium for meeting/exceeding asking
+    if (feeRel >= 1.05) base += 0.08
+    else if (feeRel >= 0.99) base += 0.03
     return Math.min(0.96, Math.max(0.04, base))
   }
 
   // Pending commitments for a team (outgoing buy offers still pending)
-  function getPendingCommitments(teamName, s = state) {
+  function getPendingCommitments(teamName, s = state, excludeOfferId = null) {
     const neg = s.negotiations || { pendingOffers: [] }
-    const offers = (neg.pendingOffers || []).filter(o => o.status === 'pending' && o.buyer === teamName)
+    const offers = (neg.pendingOffers || []).filter(o => o.status === 'pending' && o.buyer === teamName && (!excludeOfferId || o.id !== excludeOfferId))
     const pendingFees = offers.reduce((sum, o) => sum + (o.type === 'transfer' ? (o.amount || 0) : 0), 0)
     const pendingWages = offers.reduce((sum, o) => sum + (o.wage || 0), 0)
     return { pendingFees, pendingWages }
   }
 
-  function canAffordWage(team, wage, s = state) {
+  function computeSalaryCap(team, s = state) {
+    // Salary cap based on stable weekly incomes to keep sustainability
+    const ticketPrice = team.finances?.ticketPrice || GAME_CONSTANTS.FINANCE.TICKET_PRICE
+    const attendance = team.finances?.attendance || GAME_CONSTANTS.FINANCE.INITIAL_ATTENDANCE
+    const gate = (attendance * ticketPrice) / 1_000_000
+    const planId = team.finances?.sponsorContract?.planId
+    const weeksRem = team.finances?.sponsorContract?.weeksRemaining
+    let sponsor = (GAME_CONSTANTS.FINANCE.INITIAL_SPONSOR_SHIRT + GAME_CONSTANTS.FINANCE.INITIAL_SPONSOR_TECH) / 52
+    const plan = (GAME_CONSTANTS.FINANCE.SPONSOR_PLANS || []).find(p => p.id === planId)
+    if (plan && weeksRem > 0) sponsor = plan.weekly
+    const invCfg = GAME_CONSTANTS.FINANCE.INVESTMENTS
+    const inv = team.finances?.investments || { merchandising: 0, hospitality: 0 }
+    const merchLvl = Math.max(0, Math.min(invCfg.merchandising.levels.length, inv.merchandising))
+    const hospLvl = Math.max(0, Math.min(invCfg.hospitality.levels.length, inv.hospitality))
+    const merchWeekly = merchLvl > 0 ? invCfg.merchandising.levels[merchLvl - 1].weekly : 0
+    const hospWeekly = hospLvl > 0 ? invCfg.hospitality.levels[hospLvl - 1].weekly : 0
+    const passive = merchWeekly + hospWeekly
+    // Maintenance rough estimate (does not include cash percentage to avoid feedback loop)
+    const perSeat = team.finances?.facilityCostPerSeat || GAME_CONSTANTS.FINANCE.FACILITY_COST_PER_SEAT
+    const maintenance = (team.finances?.stadiumCapacity || GAME_CONSTANTS.FINANCE.MIN_STADIUM_CAPACITY) * perSeat / 1_000_000
+    const stableIncome = Math.max(0, gate + sponsor + passive - maintenance)
+    const ratio = GAME_CONSTANTS.FINANCE.SALARY_CAP_RATIO || 0.85
+    return Number((stableIncome * ratio).toFixed(3))
+  }
+
+  function canAffordWage(team, wage, s = state, excludeOfferId = null) {
     const current = team.players.reduce((sum, p) => sum + (p.wage || 0), 0)
-    const { pendingWages } = getPendingCommitments(team.name, s)
+    const { pendingWages } = getPendingCommitments(team.name, s, excludeOfferId)
     const planned = current + pendingWages + (wage || 0)
-    return planned <= (team.finances?.wageBudget || GAME_CONSTANTS.FINANCE.INITIAL_WAGE_BUDGET)
+    const budget = (team.finances?.wageBudget || GAME_CONSTANTS.FINANCE.INITIAL_WAGE_BUDGET)
+    const cap = computeSalaryCap(team, s)
+    return planned <= Math.min(budget, Math.max(0.01, cap))
   }
   function wageWarning(team, addWage = 0, s = state) {
     const budget = team.finances?.wageBudget || GAME_CONSTANTS.FINANCE.INITIAL_WAGE_BUDGET
     const current = team.players.reduce((sum, p) => sum + (p.wage || 0), 0)
     const { pendingWages } = getPendingCommitments(team.name, s)
-    const ratio = (current + pendingWages + addWage) / Math.max(0.0001, budget)
+    const cap = computeSalaryCap(team, s)
+    const hard = Math.min(budget, Math.max(0.01, cap))
+    const ratio = (current + pendingWages + addWage) / Math.max(0.0001, hard)
     return ratio >= (GAME_CONSTANTS.FINANCE.WAGE_BUDGET_WARNING_THRESHOLD || 0.9)
   }
   function getRoleCounts(team) {
@@ -205,11 +258,11 @@ export function MarketProvider({ children }) {
   }
   function canBuy(player, fee, buyer, opts = {}, s = state) {
     if (!buyer?.finances) return { ok: false, reason: 'No finances' }
-    const { pendingFees } = getPendingCommitments(buyer.name, s)
+    const { pendingFees } = getPendingCommitments(buyer.name, s, opts.excludeOfferId || null)
     const cash = (buyer.finances.cash ?? 0)
     if (cash < fee + pendingFees) return { ok: false, reason: 'Insufficient cash (with pending offers)' }
     const wageToCheck = (opts.wage != null ? opts.wage : player.wage) || 0
-    if (!canAffordWage(buyer, wageToCheck, s)) return { ok: false, reason: 'Wage budget exceeded (with pending offers)' }
+    if (!canAffordWage(buyer, wageToCheck, s, opts.excludeOfferId || null)) return { ok: false, reason: 'Wage budget exceeded (with pending offers)' }
     if (buyer.players.length >= GAME_CONSTANTS.FINANCE.MAX_SQUAD_SIZE) return { ok: false, reason: 'Squad size limit' }
     if (wouldExceedMaxOnBuy(buyer, player)) return { ok: false, reason: 'Would exceed per-role max' }
     return { ok: true }
@@ -301,23 +354,39 @@ export function MarketProvider({ children }) {
       // finalize transfer: user is seller
       const sellerIdx = s.teams.findIndex(t => t.name === offer.seller)
       const buyerIdx = s.teams.findIndex(t => t.name === offer.buyer)
-      if (sellerIdx < 0 || buyerIdx < 0) return s
+      if (sellerIdx < 0) return s
       const seller = ensureTeamMarketFinances(s.teams[sellerIdx])
-      const buyer = ensureTeamMarketFinances(s.teams[buyerIdx])
       const player = seller.players.find(p => p.id === offer.playerId)
       if (!player) return s
-      // if buyer cannot afford wages, try a simple wage counter down to available headroom (min 0.8x player's wage)
+      // If buyer is external/foreign (not in our league teams), transfer out and credit cash to seller
+      if (buyerIdx < 0) {
+        const sellerFin = { ...seller.finances, cash: Number(((seller.finances.cash || 0) + offer.amount).toFixed(GAME_CONSTANTS.FINANCE.DECIMAL_PLACES)) }
+        const nextSellerPlayers = seller.players.filter(pp => pp.id !== offer.playerId)
+        const nextSellerListings = seller.finances.playersForSale.filter(e => e.id !== offer.playerId)
+        const teams = [...s.teams]
+        teams[sellerIdx] = { ...seller, finances: { ...sellerFin, playersForSale: nextSellerListings }, players: nextSellerPlayers }
+        const pendingOffers = neg.pendingOffers.map(o => o.id === offerId ? { ...o, status: 'accepted' } : o).filter(o => o.playerId !== offer.playerId || o.status !== 'pending')
+        return { ...s, teams, negotiations: { ...neg, pendingOffers } }
+      }
+      const buyer = ensureTeamMarketFinances(s.teams[buyerIdx])
+      // If buyer cannot afford wages, try to adjust to hard headroom (min of budget and cap), down to min acceptable
       let effWage = offer.wage
       const budget = buyer.finances?.wageBudget || GAME_CONSTANTS.FINANCE.INITIAL_WAGE_BUDGET
       const current = buyer.players.reduce((sum, p) => sum + (p.wage || 0), 0)
-      const headroom = Math.max(0, budget - current)
+      const { pendingWages } = getPendingCommitments(buyer.name, s, offer.id)
+      const cap = computeSalaryCap(buyer, s)
+      const hard = Math.min(budget, Math.max(0.01, cap))
+      const headroom = Math.max(0, hard - (current + pendingWages))
       if (effWage > headroom) {
-        const minAcceptable = Math.max(player.wage * (GAME_CONSTANTS.FINANCE.NEGOTIATION_RANGES?.WAGES?.MIN_ACCEPTABLE || 0.8), GAME_CONSTANTS.FINANCE.MIN_PLAYER_WAGE || 0.01)
+        const minAcceptable = Math.max(
+          player.wage * (GAME_CONSTANTS.FINANCE.NEGOTIATION_RANGES?.WAGES?.MIN_ACCEPTABLE || 0.8),
+          GAME_CONSTANTS.FINANCE.MIN_PLAYER_WAGE || 0.01
+        )
         if (headroom >= minAcceptable) {
           effWage = Number(headroom.toFixed(2))
         }
       }
-      const check = canBuy({ ...player, wage: effWage }, offer.amount, buyer, { wage: effWage }, s)
+      const check = canBuy({ ...player, wage: effWage }, offer.amount, buyer, { wage: effWage, excludeOfferId: offer.id }, s)
       if (!check.ok) {
         // mark rejected due to affordability
         const pendingOffers = neg.pendingOffers.map(o => o.id === offerId ? { ...o, status: 'rejected' } : o)
@@ -454,19 +523,38 @@ export function MarketProvider({ children }) {
       if (meIdx >= 0) {
         const me = ensureTeamMarketFinances(s.teams[meIdx])
         const myListed = me.finances.playersForSale || []
-        if (myListed.length && Math.random() < 0.4) {
-          const pick = myListed[Math.floor(Math.random() * myListed.length)]
-          const others = s.teams.filter(t => t.name !== my).map(t => t.name)
-          if (others.length) {
-            const buyer = others[Math.floor(Math.random() * others.length)]
-            const { player } = findPlayerById(pick.id, s)
-            if (player) {
-              const amount = Number((pick.asking * (0.9 + Math.random() * 0.2)).toFixed(2))
-              const wage = Number((player.wage * (0.95 + Math.random() * 0.2)).toFixed(2))
-              const offer = { id: (crypto.randomUUID?.() || Math.random().toString(36).slice(2)), playerId: pick.id, seller: my, buyer, type: 'transfer', amount, wage, contractLength: 2 + Math.floor(Math.random() * 3), team: buyer, deadlineWeek: s.league.week + 1, status: 'pending', incoming: true, requiresDecision: true }
+        if (myListed.length) {
+          // Increased frequency and quantity: generate 1 to 3 offers most weeks
+          const attempts = (Math.random() < 0.8) ? (1 + Math.floor(Math.random() * 3)) : 0
+          if (attempts > 0) {
+            const domestic = s.teams.filter(t => t.name !== my).map(t => t.name)
+            const foreign = (GAME_CONSTANTS.TEAMS?.FOREIGN_TEAMS || [])
+            const buyersPool = [...domestic, ...foreign]
+            if (buyersPool.length) {
               const neg = ensureNegotiations(s)
-              const pendingOffers = [...neg.pendingOffers, offer]
-              return { ...s, negotiations: { ...neg, pendingOffers } }
+              let pendingOffers = [...neg.pendingOffers]
+              for (let i = 0; i < attempts; i++) {
+                const pick = myListed[Math.floor(Math.random() * myListed.length)]
+                const buyer = buyersPool[Math.floor(Math.random() * buyersPool.length)]
+                const { player } = findPlayerById(pick.id, s)
+                if (!player) continue
+                const isForeign = !s.teams.some(t => t.name === buyer)
+                // Broader ranges; foreign teams can lowball more aggressively
+                const feeVar = isForeign ? (0.6 + Math.random() * 0.45) : (0.8 + Math.random() * 0.3) // 0.60..1.05 or 0.80..1.10
+                const wageVar = isForeign ? (0.8 + Math.random() * 0.25) : (0.9 + Math.random() * 0.2) // 0.80..1.05 or 0.90..1.10
+                const amount = Number((pick.asking * feeVar).toFixed(2))
+                const wage = Number((player.wage * wageVar).toFixed(2))
+                // For domestic buyers, ensure they can afford the offer; foreign buyers are always feasible
+                if (!isForeign) {
+                  const buyerTeam = s.teams.find(t => t.name === buyer)
+                  const can = canBuy(player, amount, buyerTeam, { wage }, s)
+                  if (!can.ok) continue
+                }
+                const offer = { id: (crypto.randomUUID?.() || Math.random().toString(36).slice(2)), playerId: pick.id, seller: my, buyer, type: 'transfer', amount, wage, contractLength: 2 + Math.floor(Math.random() * 3), team: buyer, deadlineWeek: s.league.week + 1, status: 'pending', incoming: true, requiresDecision: true }
+                pendingOffers.push(offer)
+              }
+              // set UI badge: new incoming offers for user
+              return { ...s, ui: { ...(s.ui || {}), marketBadge: true }, negotiations: { ...neg, pendingOffers } }
             }
           }
         }
@@ -491,11 +579,12 @@ export function MarketProvider({ children }) {
         if (!byPlayer.has(key)) byPlayer.set(key, [])
         byPlayer.get(key).push(o)
       }
-      let next = { ...s }
+  let next = { ...s }
       let pending = [...neg.pendingOffers]
+  let anyMineResolved = false
       const ranges = GAME_CONSTANTS.FINANCE.NEGOTIATION_RANGES
       // Resolve per player: choose best offer and probabilistically accept
-      byPlayer.forEach((offers, pid) => {
+  byPlayer.forEach((offers, pid) => {
         const entry = offers[0]
   if (entry.type === 'free') {
           // player picks best wage/length
@@ -506,7 +595,7 @@ export function MarketProvider({ children }) {
           const buyerIdx = next.teams.findIndex(t => t.name === best.buyer)
           if (buyerIdx < 0) return
           const buyer = ensureTeamMarketFinances(next.teams[buyerIdx])
-          if (!canAffordWage(buyer, best.wage, next)) return
+          if (!canAffordWage(buyer, best.wage, next, best.id)) return
           const pAccept = acceptanceFA(player, best)
           if (Math.random() < pAccept) {
             // finalize
@@ -514,7 +603,12 @@ export function MarketProvider({ children }) {
             const nextBuyer = { ...buyer, players: [...buyer.players, { ...player, starting: false, wage: best.wage }] }
             const teams = [...next.teams]; teams[buyerIdx] = nextBuyer
             next = { ...next, teams, freeAgents: nextFA }
-            pending = pending.map(o => o.playerId === pid ? { ...o, status: o.id === best.id ? 'accepted' : 'rejected' } : o)
+            pending = pending.map(o => {
+              if (o.playerId !== pid) return o
+              const updated = { ...o, status: o.id === best.id ? 'accepted' : 'rejected' }
+              if (updated.buyer === s.teamName) anyMineResolved = true
+              return updated
+            })
           }
         } else {
           // transfer: seller chooses best fee, modulated by wage attractiveness and contract length
@@ -522,32 +616,86 @@ export function MarketProvider({ children }) {
           const best = offers[0]
           const sellerIdx = next.teams.findIndex(t => t.name === best.seller)
           const buyerIdx = next.teams.findIndex(t => t.name === best.buyer)
-          if (sellerIdx < 0 || buyerIdx < 0) return
+          if (sellerIdx < 0) return
           const seller = ensureTeamMarketFinances(next.teams[sellerIdx])
-          const buyer = ensureTeamMarketFinances(next.teams[buyerIdx])
           const player = seller.players.find(p => p.id === pid)
           if (!player) return
           const askingEntry = (seller.finances.playersForSale || []).find(e => e.id === pid)
           const asking = askingEntry?.asking ?? player.value
           const pAccept = acceptanceTransfer(player, best, asking)
-          const can = canBuy(player, best.amount, buyer, { wage: best.wage }, next)
-          if (can.ok && Math.random() < pAccept) {
-            const buyerFin = { ...buyer.finances, cash: Number(((buyer.finances.cash || 0) - best.amount).toFixed(GAME_CONSTANTS.FINANCE.DECIMAL_PLACES)) }
+          const isForeign = buyerIdx < 0
+          let canProceed = true
+          let buyer
+          if (!isForeign) {
+            buyer = ensureTeamMarketFinances(next.teams[buyerIdx])
+            const can = canBuy(player, best.amount, buyer, { wage: best.wage, excludeOfferId: best.id }, next)
+            canProceed = can.ok
+          }
+          if (canProceed && Math.random() < pAccept) {
             const sellerFin = { ...seller.finances, cash: Number(((seller.finances.cash || 0) + best.amount).toFixed(GAME_CONSTANTS.FINANCE.DECIMAL_PLACES)) }
             const nextSellerPlayers = seller.players.filter(pp => pp.id !== pid)
-            const nextBuyerPlayers = [...buyer.players, { ...player, starting: false, wage: best.wage }]
             const nextSellerListings = seller.finances.playersForSale.filter(e => e.id !== pid)
             const teams = [...next.teams]
             teams[sellerIdx] = { ...seller, finances: { ...sellerFin, playersForSale: nextSellerListings }, players: nextSellerPlayers }
-            teams[buyerIdx] = { ...buyer, finances: buyerFin, players: nextBuyerPlayers }
+            if (!isForeign) {
+              const buyerFin = { ...buyer.finances, cash: Number(((buyer.finances.cash || 0) - best.amount).toFixed(GAME_CONSTANTS.FINANCE.DECIMAL_PLACES)) }
+              const nextBuyerPlayers = [...buyer.players, { ...player, starting: false, wage: best.wage }]
+              teams[buyerIdx] = { ...buyer, finances: buyerFin, players: nextBuyerPlayers }
+            }
             next = { ...next, teams }
-            pending = pending.map(o => o.playerId === pid ? { ...o, status: o.id === best.id ? 'accepted' : 'rejected' } : o)
+            pending = pending.map(o => {
+              if (o.playerId !== pid) return o
+              const updated = { ...o, status: o.id === best.id ? 'accepted' : 'rejected' }
+              if (updated.buyer === s.teamName) anyMineResolved = true
+              return updated
+            })
           }
         }
       })
   // Expire offers that hit their deadline this week
-  pending = pending.map(o => (o.status === 'pending' && o.deadlineWeek === week) ? { ...o, status: 'expired' } : o)
-      return { ...next, negotiations: { ...neg, pendingOffers: pending } }
+  pending = pending.map(o => {
+        if (o.status === 'pending' && o.deadlineWeek === week) {
+          const updated = { ...o, status: 'expired' }
+          if (updated.buyer === s.teamName) anyMineResolved = true
+          return updated
+        }
+        return o
+      })
+      // Build a summary for the user's outgoing offers due this week
+      try {
+        const my = s.teamName
+        const mine = pending.filter(o => o.buyer === my && o.deadlineWeek === week && o.status !== 'pending')
+        if (mine.length) {
+          const accepted = []
+          const rejected = []
+          const expired = []
+          for (const o of mine) {
+            const { player } = findPlayerById(o.playerId, next) || {}
+            const label = player ? `${player.name} (${o.type === 'free' ? 'Free' : 'Transfer'})` : `${o.playerId}`
+            if (o.status === 'accepted') accepted.push(label)
+            else if (o.status === 'rejected') rejected.push(label)
+            else if (o.status === 'expired') expired.push(label)
+          }
+          const block = (title, items) => items.length ? `<li><strong>${title}:</strong> ${items.join(', ')}</li>` : ''
+          const html = `
+            <div>
+              <h3 style="margin-top:0">Negotiations Update — Week ${week}</h3>
+              <ul>
+                ${block('Accepted', accepted)}
+                ${block('Rejected', rejected)}
+                ${block('Expired', expired)}
+              </ul>
+            </div>`
+          // Inform the user via debug modal if available
+          window.debugUI?.showModal?.('Negotiations', html)
+        }
+      } catch (e) {
+        // Non-fatal if UI hook not present
+        console.warn('Negotiations summary modal failed', e)
+      }
+      // If any of my outgoing offers were resolved, set Market badge
+      const ui = anyMineResolved ? { ...(next.ui || {}), marketBadge: true } : (next.ui || next.ui)
+      return { ...next, ui, negotiations: { ...neg, pendingOffers: pending } }
     })
     saveNow()
   }
@@ -558,8 +706,12 @@ export function MarketProvider({ children }) {
     autoListAIPlayers,
     aggregateTransferList,
     findPlayerById,
+  getOffersForPlayer,
+  getOfferStatsForPlayer,
+    getPendingCommitments,
     canAffordWage,
     wageWarning,
+    computeSalaryCap,
     canBuy,
     wouldExceedMaxOnBuy,
     willViolateMinOnSell,

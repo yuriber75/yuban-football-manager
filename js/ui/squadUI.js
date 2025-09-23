@@ -21,9 +21,29 @@ window.squadUI = {
 			const formationSelect = document.getElementById('tacticsFormation');
 			if (formationSelect) {
 				formationSelect.value = team.tactics?.formation || team.formation;
-				this.updateStartingXI(team);
+                this.updateStartingXI(team);
 			}
 		}
+
+    // Wire buttons for autopick and clear (with fallback to old IDs)
+    const autoBtn = document.getElementById('autopick') || document.getElementById('autoPickXI');
+    const clearBtn = document.getElementById('clear') || document.getElementById('clearXI');
+        if (autoBtn) {
+            autoBtn.addEventListener('click', () => {
+                const my = getMyTeam();
+                this.autoPickXIAndBench(my);
+                this.renderSquadTab();
+                saveState();
+            });
+        }
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                const my = getMyTeam();
+                this.clearStartingXI(my);
+                this.renderSquadTab();
+                saveState();
+            });
+        }
 	},
 	
     // Rendering principale della tab squadra
@@ -249,6 +269,10 @@ window.squadUI = {
         newPlayer.starting = true;
         newPlayer.section = section;
         newPlayer.positionIndex = index;
+        // Se il giocatore era in panchina, rimuovilo dalla panchina
+        if (typeof newPlayer.benchIndex === 'number') {
+            newPlayer.benchIndex = undefined;
+        }
         this.updatePlayerRow(newPlayer);
     },
 
@@ -256,14 +280,69 @@ window.squadUI = {
     updatePlayerRow: function(player) {
         const row = document.querySelector(`tr[data-player-id="${player.id}"]`);
         if (row) {
-            commonUI.toggleClass(row, 'player-starting', player.starting);
+            const isOnBench = typeof player.benchIndex === 'number';
+            commonUI.toggleClass(row, 'player-starting', !!player.starting);
+            commonUI.toggleClass(row, 'player-bench', isOnBench);
             const statusCell = row.querySelector('td:last-child');
             if (statusCell) {
                 statusCell.innerHTML = player.starting ? 
                     '<span class="status-starting">Starting</span>' : 
-                    '<span class="status-sub">Sub</span>';
+                    (isOnBench ? '<span class="status-bench">Bench</span>' : '<span class="status-sub">Sub</span>');
             }
         }
+    },
+
+    // Pulisce gli 11 titolari (mantiene la panchina intatta)
+    clearStartingXI: function(team) {
+        team.players.forEach(p => {
+            if (p.starting) {
+                p.starting = false;
+                p.positionIndex = undefined;
+                p.section = undefined;
+            }
+        });
+    },
+
+    // Auto-pick per XI e panchina con massimo 1 portiere in panchina
+    autoPickXIAndBench: function(team) {
+        if (!team) return;
+
+        // Reset: mantieni benchIndex, azzera solo XI
+        team.players.forEach(p => {
+            p.starting = false;
+            p.positionIndex = undefined;
+            p.section = undefined;
+        });
+
+        // Scegli miglior 11 in base alla formazione corrente
+        if (!team.formation && team.tactics?.formation) team.formation = team.tactics.formation;
+        if (!team.formation) team.formation = '442';
+        this.selectBestEleven(team);
+
+        // Costruisci insieme giocatori già scelti
+        const starters = new Set(team.players.filter(p => p.starting).map(p => p.id));
+        // Svuota la panchina
+        team.players.forEach(p => { p.benchIndex = undefined; });
+
+        // Ordina i rimanenti per overall desc
+        const remaining = team.players.filter(p => !starters.has(p.id)).sort((a,b) => b.overall - a.overall);
+
+        let benchCount = 0;
+        let gkOnBench = 0;
+        for (const p of remaining) {
+            if (benchCount >= 7) break;
+            const isGK = (Array.isArray(p.roles) ? p.roles : [p.ruolo || p.primaryRole]).includes('GK') || p.roles?.[0] === 'GK' || p.ruolo === 'GK' || p.primaryRole === 'GK';
+            if (isGK) {
+                if (gkOnBench >= 1) continue;
+                gkOnBench++;
+            }
+            p.benchIndex = benchCount;
+            benchCount++;
+        }
+
+        this.updateStartingXI(team);
+        // Aggiorna righe tabella
+        team.players.forEach(p => this.updatePlayerRow(p));
     },
 
     // Setup degli event listener per la formazione

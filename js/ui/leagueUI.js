@@ -21,6 +21,7 @@ window.leagueUI = {
         this.renderTable();
         this.renderFixtures();
         this.renderStats();
+		this.renderAllWeeksResults();
 	},
 	
     // Validazione dei dati della lega
@@ -32,32 +33,34 @@ window.leagueUI = {
 	},
 	
     // Rendering della classifica
-    renderTable: function() {
-        const tableEl = document.getElementById('leagueTable');
-        if (!tableEl) return;
-		
-        try {
-            const tableData = Object.values(STATE.league.table)
-			.sort((a, b) => this.sortTeams(a, b));
-			
-            tableEl.innerHTML = `
-			<tr>
-			<th>Pos</th>
-			<th>Team</th>
-			<th title="Games Played">GP</th>
-			<th title="Points">Pts</th>
-			<th title="Wins">W</th>
-			<th title="Draws">D</th>
-			<th title="Losses">L</th>
-			<th title="Goals For">GF</th>
-			<th title="Goals Against">GA</th>
-			<th title="Goal Difference">GD</th>
-			</tr>
-			${tableData.map((team, index) => this.createTableRow(team, index + 1)).join('')}
-            `;
-			} catch (error) {
-            console.error('Errore nel rendering della classifica:', error);
-            tableEl.innerHTML = '<tr><td colspan="10">Error loading league table</td></tr>';
+	renderTable: function() {
+		const tableEl = document.getElementById('leagueTable');
+		if (!tableEl) return;
+		const thead = tableEl.querySelector('thead');
+		const tbody = tableEl.querySelector('tbody');
+        
+		try {
+			const tableData = Object.values(STATE.league.table).sort((a, b) => this.sortTeams(a, b));
+
+			thead.innerHTML = `
+				<tr>
+					<th>Pos</th>
+					<th>Team</th>
+					<th title="Games Played">GP</th>
+					<th title="Points">Pts</th>
+					<th title="Wins">W</th>
+					<th title="Draws">D</th>
+					<th title="Losses">L</th>
+					<th title="Goals For">GF</th>
+					<th title="Goals Against">GA</th>
+					<th title="Goal Difference">GD</th>
+				</tr>
+			`;
+
+			tbody.innerHTML = tableData.map((team, index) => this.createTableRow(team, index + 1)).join('');
+		} catch (error) {
+			console.error('Errore nel rendering della classifica:', error);
+			tbody.innerHTML = '<tr><td colspan="10">Error loading league table</td></tr>';
 		}
 	},
 	
@@ -70,22 +73,23 @@ window.leagueUI = {
 	},
 	
     // Crea una riga della classifica
-    createTableRow: function(team, position) {
-        const isMyTeam = team.team === STATE.teamName;
-        return `
-		<tr class="${isMyTeam ? 'my-team' : ''}">
-		<td>${position}</td>
-		<td>${team.team}</td>
-		<td>${team.pld || 0}</td>
-		<td><strong>${team.pts || 0}</strong></td>
-		<td>${team.w || 0}</td>
-		<td>${team.d || 0}</td>
-		<td>${team.l || 0}</td>
-		<td>${team.gf || 0}</td>
-		<td>${team.ga || 0}</td>
-		<td>${team.gd || 0}</td>
-		</tr>
-        `;
+	createTableRow: function(team, position) {
+		const isMyTeam = team.team === STATE.teamName;
+		const posClass = position <= 4 ? 'pos-top' : position >= (Object.keys(STATE.league.table).length - 2) ? 'pos-bottom' : 'pos-mid';
+		return `
+			<tr class="${isMyTeam ? 'my-team' : ''} ${posClass}">
+				<td>${position}</td>
+				<td>${team.team}</td>
+				<td>${team.pld || 0}</td>
+				<td><strong>${team.pts || 0}</strong></td>
+				<td>${team.w || 0}</td>
+				<td>${team.d || 0}</td>
+				<td>${team.l || 0}</td>
+				<td>${team.gf || 0}</td>
+				<td>${team.ga || 0}</td>
+				<td>${team.gd || 0}</td>
+			</tr>
+		`;
 	},
 	
 	sortFixturesList: function(fixtures) {
@@ -233,13 +237,45 @@ window.leagueUI = {
 	
 	
     // Ottiene il risultato di una partita
-    getMatchResult: function(homeIdx, awayIdx) {
-        if (!STATE.league.results) return null;
-        return STATE.league.results.find(r => 
-            r.week === STATE.league.week - 1 && 
-            r.home === homeIdx && 
-            r.away === awayIdx
-		);
+	getMatchResult: function(homeIdx, awayIdx) {
+		if (!STATE.league.results) return null;
+		const currentViewWeek = STATE.league.currentViewWeek !== undefined 
+			? STATE.league.currentViewWeek 
+			: STATE.league.week - 1;
+		// In results, weeks appear to be 1-based in the other accessor; align here
+		const targetWeek = currentViewWeek + 1;
+		return STATE.league.results.find(r => r.week === targetWeek && r.home === homeIdx && r.away === awayIdx);
+	},
+
+	// Render a compact list of all matchdays with played results
+	renderAllWeeksResults: function() {
+		const container = document.getElementById('allWeeksResults');
+		if (!container) return;
+		const weeks = STATE.league.fixtures || [];
+		const results = STATE.league.results || [];
+		const lines = [];
+		for (let w = 0; w < weeks.length; w++) {
+			const fixtures = weeks[w] || [];
+			const weekHeader = `<div class="week-block"><div class="week-title">Week ${w + 1}</div>`;
+			const items = fixtures.map(([homeIdx, awayIdx]) => {
+				const home = STATE.teams[homeIdx]?.name || '—';
+				const away = STATE.teams[awayIdx]?.name || '—';
+				// results.week expected 1-based
+				const res = this.getMatchResultForWeek(homeIdx, awayIdx, w);
+				const score = res ? `${res.homeGoals} - ${res.awayGoals}` : 'vs';
+				const cls = (home === STATE.teamName || away === STATE.teamName) ? 'my-team' : '';
+				return `<div class="fixture-line ${cls}"><span class="home">${home}</span><span class="score">${score}</span><span class="away">${away}</span></div>`;
+			}).join('');
+			lines.push(`${weekHeader}<div class="week-list">${items}</div></div>`);
+		}
+		container.innerHTML = lines.join('');
+	},
+
+	// Helper: result for a specific week (0-based index)
+	getMatchResultForWeek: function(homeIdx, awayIdx, weekIndex0) {
+		const res = STATE.league.results || [];
+		const targetWeek = (weekIndex0 ?? 0) + 1; // results store week as 1-based
+		return res.find(r => r.week === targetWeek && r.home === homeIdx && r.away === awayIdx) || null;
 	},
 	
 	
@@ -358,17 +394,10 @@ window.leagueUI = {
 	
 	getMatchResult: function(homeIdx, awayIdx) {
 		if (!STATE.league.results) return null;
-		
-		// Cerca il risultato per questa combinazione di squadre nella settimana visualizzata
 		const currentViewWeek = STATE.league.currentViewWeek !== undefined 
-		? STATE.league.currentViewWeek 
-		: STATE.league.week - 1;
-		
-		return STATE.league.results.find(r => 
-			r.week === currentViewWeek + 1 && // +1 perché le settimane partono da 1 non da 0
-			r.home === homeIdx && 
-			r.away === awayIdx
-		);
+			? STATE.league.currentViewWeek 
+			: STATE.league.week - 1;
+		return this.getMatchResultForWeek(homeIdx, awayIdx, currentViewWeek);
 	}
 
 

@@ -7,6 +7,9 @@ const defaultState = {
   manager: '',
   teamName: '',
   teams: [],
+  ui: {
+    marketBadge: false, // show dot on Market tab for new offers/accepted outcomes
+  },
   league: {
     week: 1,
     currentViewWeek: 0,
@@ -97,17 +100,35 @@ function hydrate(raw) {
   }
 
   if (Array.isArray(parsed.teams)) {
-    parsed.teams = parsed.teams.map((team) => ({
-      ...team,
-      finances: {
+    parsed.teams = parsed.teams.map((team) => {
+      const fin = {
         cash: 0,
         wageBudget: GAME_CONSTANTS.FINANCE.INITIAL_WAGE_BUDGET,
         stadiumCapacity: GAME_CONSTANTS.FINANCE.MIN_STADIUM_CAPACITY,
         attendance: GAME_CONSTANTS.FINANCE.INITIAL_ATTENDANCE,
+        stadiumCondition: team.finances?.stadiumCondition || GAME_CONSTANTS.FINANCE.MIN_STADIUM_CONDITION || 0.8,
+        loans: Array.isArray(team.finances?.loans) ? team.finances.loans : [],
         ...(team.finances || {}),
-      },
-      tactics: team.tactics || { formation: team.formation || '442' },
-    }))
+        sponsorContract: team.finances?.sponsorContract || null,
+        investments: team.finances?.investments || { merchandising: 0, hospitality: 0 },
+      }
+      // Migrate wages: ensure wages are in M per WEEK (~0.02–0.10). If looks annual (>= 0.30 M/wk), convert by /52.
+      const migratedPlayers = (team.players || []).map(p => {
+        let w = Number(p.wage || 0)
+        if (w >= 0.30) w = w / 52
+        const minW = GAME_CONSTANTS.FINANCE.MIN_PLAYER_WAGE
+        const maxW = GAME_CONSTANTS.FINANCE.MAX_PLAYER_WAGE
+        if (!isFinite(w) || isNaN(w)) w = minW
+        w = Math.max(minW, Math.min(maxW, Number(w.toFixed(2))))
+        return { ...p, wage: w }
+      })
+      return {
+        ...team,
+        finances: fin,
+        tactics: team.tactics || { formation: team.formation || '442' },
+        players: migratedPlayers,
+      }
+    })
 
     // Ensure jersey numbers exist/unique per team
     parsed.teams.forEach(t => {
@@ -146,6 +167,9 @@ export function GameStateProvider({ children }) {
   const api = useMemo(() => ({
     state,
     setState,
+    // UI helpers
+    setMarketBadge: (on) => setState((s) => ({ ...s, ui: { ...(s.ui || {}), marketBadge: !!on } })),
+    clearMarketBadge: () => setState((s) => ({ ...s, ui: { ...(s.ui || {}), marketBadge: false } })),
     saveNow: () => {
       if (!ready) return
       try { localStorage.setItem(GAME_CONSTANTS.STORAGE.SAVE_KEY, serialize(state)); setHasSaved(true) } catch {}

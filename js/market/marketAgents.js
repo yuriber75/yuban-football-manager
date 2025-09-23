@@ -80,7 +80,7 @@ window.marketAgents = {
         // Aggiorna la vista
         window.marketDisplay.updateFreeAgentsList();
         
-        window.marketUtils.showNotification('Offer submitted. The player will respond after the next match.');('Offer submitted. The player will respond after the next match.');
+		window.marketUtils.showNotification('Offer submitted. The player will respond after the next match.');
         saveState();
     },	
 	

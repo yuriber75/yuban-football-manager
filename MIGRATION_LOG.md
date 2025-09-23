@@ -42,6 +42,15 @@ Next steps:
 ## 2025-09-23
 - Authored `docs/MARKET_NEGOTIATIONS_PARITY.md`: side-by-side comparison of vanilla vs React negotiation/transfer flows and an integration plan (schema normalization, validations parity, acceptance calculator, competing-offer generator, and Offers UX).
 - React parity Phase 1 (done): Adjusted weekly cadence to resolve negotiations before market churn; `resolveNegotiations()` now processes only offers expiring in the current week and expires strictly at deadline.
- - React parity Phase 2 (progress):
+ - React parity Phase 2 (completed):
 	 - Added pending-cost checks to React validations (cash and wages) so affordability includes cumulative pending offers.
 	 - Centralized acceptance calculator in React (`MarketContext.jsx`) for FA and transfers to mirror vanilla tolerances and age/length/star adjustments; replaced inline formulas in resolver.
+	 - Fixed affordability double-counting during resolution/acceptance by excluding the currently-evaluated offer from pending commitments.
+
+### Finance tuning (weekly balance)
+- Increased base sponsors and added dynamic sponsor wage support to reduce chronic negative cash flow when wages are realistic:
+	- `INITIAL_SPONSOR_TECH` 70 → 120; `INITIAL_SPONSOR_SHIRT` 12 → 24.
+	- New `SPONSOR_WAGE_SUPPORT_RATIO = 1.0` so weekly sponsor ≈ base + 100% of current weekly wages (tunable).
+	- Ticket price 60 → 80; initial attendance 5k → 8k; minimum attendance share 20% → 35%.
+	- Reduced maintenance burden: facility per-seat 0.2 → 0.12 and maintenance % 0.08 → 0.05.
+- Updated `financeEngine` to compute `sponsor = baseWeekly + SPONSOR_WAGE_SUPPORT_RATIO * weeklyWages`.

@@ -214,18 +214,31 @@ showResponses: function(responses, onComplete) {
 			'.contract-length': `${contractLength} years`
 		};
 
-		const buttons = {
-			confirm: () => {
-				window.marketTransfers.acceptOffer(response.offer, response.player);
-				window.marketUtils.showNotification(
-					`${nome} has joined your team!`,
-					callback
-				);
-			},
-			cancel: () => {
-				window.marketUtils.showNotification(MESSAGES.CANCEL, callback);
-			}
-		};
+        const buttons = {
+            confirm: () => {
+                window.marketTransfers.acceptOffer(response.offer, response.player);
+                // Reset attempts on acceptance
+                if (STATE.negotiations?.attemptsCount) {
+                    delete STATE.negotiations.attemptsCount[response.player.id];
+                }
+                window.marketUtils.showNotification(
+                    `${nome} has joined your team!`,
+                    callback
+                );
+            },
+            cancel: () => {
+                // Count as a rejection attempt
+                const id = response.player.id;
+                if (!STATE.negotiations.attemptsCount) STATE.negotiations.attemptsCount = {};
+                STATE.negotiations.attemptsCount[id] = (STATE.negotiations.attemptsCount[id] || 0) + 1;
+                const attempts = STATE.negotiations.attemptsCount[id];
+                if (attempts >= 3) {
+                    STATE.negotiations.rejectedPlayers.add(id);
+                }
+                saveState();
+                window.marketUtils.showNotification(MESSAGES.CANCEL, callback);
+            }
+        };
 
 		this.showBaseModal(TEMPLATES.TRANSFER, content, buttons, callback);
 	},
@@ -299,20 +312,25 @@ showTransferConfirmation: function(response, callback) {
 
 
 	showRejectionResponse: function(response, callback) {
-		if (response.offer.team === getMyTeam().name) {
-			const maxAttemptsReached = response.attempts >= 3;
-			const message = maxAttemptsReached ?
-				`${response.player.nome} is no longer interested in negotiations.` :
-				`${response.player.nome} has rejected your offer.`;
+        if (response.offer.team === getMyTeam().name) {
+            const id = response.player.id;
+            if (!STATE.negotiations.attemptsCount) STATE.negotiations.attemptsCount = {};
+            STATE.negotiations.attemptsCount[id] = (STATE.negotiations.attemptsCount[id] || 0) + 1;
+            const attempts = STATE.negotiations.attemptsCount[id];
+            const remaining = Math.max(0, 3 - attempts);
+            const maxAttemptsReached = attempts >= 3;
+            const message = maxAttemptsReached ?
+                `${response.player.nome} is no longer interested in negotiations.` :
+                `${response.player.nome} has rejected your offer. Attempts left: ${remaining}`;
 			
-			if (maxAttemptsReached) {
-				STATE.negotiations.rejectedPlayers.add(response.player.id);
-			}
-			
-			window.marketUtils.showNotification(message, callback);
-		} else {
-			if (callback) callback();
-		}
+            if (maxAttemptsReached) {
+                STATE.negotiations.rejectedPlayers.add(id);
+            }
+            saveState();
+            window.marketUtils.showNotification(message, callback);
+        } else {
+            if (callback) callback();
+        }
 	},
 
 

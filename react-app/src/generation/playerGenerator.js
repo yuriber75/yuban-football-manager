@@ -136,12 +136,17 @@ export function makePlayer(primaryRole = 'MC') {
   if (primaryRole === 'ST' || primaryRole === 'GK') value *= 1.05
   value = Math.min(GAME_CONSTANTS.FINANCE.MAX_TRANSFER_VALUE, Math.max(GAME_CONSTANTS.FINANCE.MIN_TRANSFER_VALUE, Number(value.toFixed(2))))
 
-  // Wage baseline in M/wk; stars earn premium
-  let wage = (overall / 100) * GAME_CONSTANTS.FINANCE.BASE_WAGE_MULTIPLIER
-  if (overall >= 90) wage *= 1.4
-  else if (overall >= 85) wage *= 1.2
-  else if (overall <= 65) wage *= 0.9
-  wage = Math.max(GAME_CONSTANTS.FINANCE.MIN_PLAYER_WAGE, Number(wage.toFixed(2)))
+  // Wage in M per WEEK, targeting ~1–5M per year (≈0.02–0.10 M/wk)
+  // Base curve: 60 OVR ≈ 0.02 M/wk, 100 OVR ≈ 0.08 M/wk
+  let wage = 0.02 + Math.max(0, (overall - 60)) / 40 * 0.06
+  // Role scarcity premium and star bump
+  if (primaryRole === 'ST' || primaryRole === 'GK') wage *= 1.06
+  if (overall >= 90) wage *= 1.08
+  // Clamp to configured weekly bounds
+  wage = Math.min(
+    GAME_CONSTANTS.FINANCE.MAX_PLAYER_WAGE,
+    Math.max(GAME_CONSTANTS.FINANCE.MIN_PLAYER_WAGE, Number(wage.toFixed(2)))
+  )
 
   // Assign roles: primary plus optional secondary/tertiary per mapping
   // 30% chance for a second role; 10% for a third role (if available).

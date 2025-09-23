@@ -174,8 +174,9 @@ export const GAME_CONSTANTS = {
   },
   FINANCE: {
     INITIAL_CASH: 30,
-    INITIAL_SPONSOR_TECH: 70,
-    INITIAL_SPONSOR_SHIRT: 12,
+  // Baseline (annual) sponsors used only when no plan is active. Keep modest.
+  INITIAL_SPONSOR_TECH: 10,
+  INITIAL_SPONSOR_SHIRT: 5,
     INITIAL_WAGE_BUDGET: 82,
     MIN_TRANSFER_BUDGET: 20,
     MAX_TRANSFER_BUDGET: 50,
@@ -185,15 +186,34 @@ export const GAME_CONSTANTS = {
     MAX_SPONSOR_TECH: 20,
     MIN_SPONSOR_SHIRT: 8,
     MAX_SPONSOR_SHIRT: 30,
-    MIN_STADIUM_CAPACITY: 15000,
-    MAX_STADIUM_CAPACITY: 20000,
-    INITIAL_ATTENDANCE: 5000,
-    MIN_ATTENDANCE_PERCENTAGE: 0.2,
-    TICKET_PRICE: 60,
+  MIN_STADIUM_CAPACITY: 15000,
+  // Raised to allow multi-tier upgrades to take effect beyond 20k
+  MAX_STADIUM_CAPACITY: 40000,
+  INITIAL_ATTENDANCE: 8000,
+  MIN_ATTENDANCE_PERCENTAGE: 0.35,
+  TICKET_PRICE: 80,
+  ATTENDANCE_PRICE_ELASTICITY: 0.6,
+  STADIUM_UPGRADES: [
+    { id: 'tier1', addSeats: 3000, cost: 8, upkeepPerSeatMult: 1.05 },
+    { id: 'tier2', addSeats: 4000, cost: 12, upkeepPerSeatMult: 1.1 },
+    { id: 'tier3', addSeats: 6000, cost: 18, upkeepPerSeatMult: 1.15 },
+  ],
     ATTENDANCE_WIN_BOOST: 1.1,
     ATTENDANCE_LOSS_PENALTY: 0.95,
-    FACILITY_COST_PER_SEAT: 0.2,
-    MAINTENANCE_COST_PERCENTAGE: 0.08,
+  FACILITY_COST_PER_SEAT: 0.12,
+  // Stadium valuation & loans
+  STADIUM_BASE_VALUE_PER_SEAT: 0.002, // M€ per seat baseline (2k € per seat)
+  MIN_STADIUM_CONDITION: 0.6,
+  LOAN_BANKS: [
+    'Banca Mediterranea', 'Alpine Trust', 'Europa Capital', 'Iberia Credit', 'Nordic Mutual', 'Adriatic Bank'
+  ],
+  LOAN_LTV_RANGE: { MIN: 0.3, MAX: 0.6 }, // % of stadium value
+  LOAN_RATE_RANGE_WEEKLY: { MIN: 0.0015, MAX: 0.0045 }, // 0.15%–0.45% per week
+  LOAN_TERMS_WEEKS: [26, 52, 78],
+  MAX_ACTIVE_LOANS: 2,
+  SECOND_LOAN_RATE_MULT: 2.5, // second loan has +150% interest → 2.5x base rate
+  SALARY_CAP_RATIO: 0.85,
+  MAINTENANCE_COST_PERCENTAGE: 0.05,
     MIN_SQUAD_SIZE: 14,
     MAX_PLAYERS_FOR_SALE: 4,
     MIN_GOALKEEPER: 2,
@@ -209,15 +229,15 @@ export const GAME_CONSTANTS = {
     MAX_CONTRACT_LENGTH: 5,
     WAGE_PAYMENT_INTERVAL: 'weekly',
     WAGE_BUDGET_WARNING_THRESHOLD: 0.9,
-    MIN_PLAYER_WAGE: 0.02,
-    MAX_PLAYER_WAGE: 0.25,
+  MIN_PLAYER_WAGE: 0.02,
+  MAX_PLAYER_WAGE: 0.10,
     SPONSOR_PAYMENT_INTERVAL: 'weekly',
     SPONSOR_BONUS_WIN: 0.1,
     SPONSOR_BONUS_TROPHY: 5,
     MIN_TRANSFER_VALUE: 1,
     MAX_TRANSFER_VALUE: 100,
     BASE_VALUE_MULTIPLIER: 8,
-    BASE_WAGE_MULTIPLIER: 2.4,
+  BASE_WAGE_MULTIPLIER: 2.4,
     TRANSFER_VALUE_MULTIPLIER: {
       YOUNG_TALENT: 1.5,
       PRIME: 1.2,
@@ -226,6 +246,39 @@ export const GAME_CONSTANTS = {
       YOUTH_BONUS: 0.1,
     },
     WAGE_LIMITS: { MIN_WEEKLY: 0.01, MAX_WEEKLY: 0.2, SUPERSTAR: 0.4 },
+  // Ensure sponsor income can support a share of weekly wages. 1.0 ~= breakeven on wages via sponsorship alone.
+    SPONSOR_WAGE_SUPPORT_RATIO: 0.0,
+    // Sponsor plans (mutually exclusive). Inverse proportionality between upfront cash and weekly pay.
+    SPONSOR_PLANS: [
+      { id: 'upfront_heavy', label: 'Upfront Heavy', upfront: 8, weekly: 0.25, durationWeeks: 52 },
+      { id: 'balanced', label: 'Balanced', upfront: 4, weekly: 0.5, durationWeeks: 52 },
+      { id: 'weekly_heavy', label: 'Weekly Heavy', upfront: 1, weekly: 0.9, durationWeeks: 52 },
+    ],
+    // Pool of fictional sponsor brand names; used to label sponsor offers
+    SPONSOR_BRANDS: [
+      'NovaTech', 'Orion Air', 'Apex Motors', 'VeloBank', 'Atlas Health', 'Stellar Energy',
+      'Cobalt Drinks', 'Polar Telecom', 'Aurora Hotels', 'Nimbus Cloud', 'Titan Tools', 'Vertex Insurance',
+      'Solaris Power', 'Zenith Foods', 'BluePeak Logistics', 'EuroLink', 'Marathon Outfitters', 'QuantumNet'
+    ],
+    // Investment tracks for passive weekly income
+    INVESTMENTS: {
+      merchandising: {
+        label: 'Merchandising',
+        levels: [
+          { cost: 5, weekly: 0.2 },
+          { cost: 10, weekly: 0.5 },
+          { cost: 20, weekly: 1.2 },
+        ],
+      },
+      hospitality: {
+        label: 'Hospitality',
+        levels: [
+          { cost: 6, weekly: 0.22 },
+          { cost: 12, weekly: 0.55 },
+          { cost: 24, weekly: 1.3 },
+        ],
+      },
+    },
     NEGOTIATION_RANGES: {
       TRANSFER_FEE: { MIN_ACCEPTABLE: 0.7, MAX_COUNTER: 1.3, PREFERRED: 1.0 },
       WAGES: { MIN_ACCEPTABLE: 0.8, MAX_COUNTER: 1.2, PREFERRED: 1.0 },

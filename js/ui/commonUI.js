@@ -59,6 +59,8 @@ window.commonUI = {
         const overallClass = this.getRatingClass(player.overall);
         const isGK = player.roles[0] === 'GK';
         const headers = isGK ? GAME_CONSTANTS.UI.HEADERS.GK : GAME_CONSTANTS.UI.HEADERS.OUTFIELD;
+        const isStarting = !!player.starting;
+        const isOnBench = typeof player.benchIndex === 'number';
 
         tr.innerHTML = `
             <td>${player.number} ${player.nome}</td>
@@ -69,11 +71,11 @@ window.commonUI = {
             ).join('')}
             <td>${player.form}%</td>
             <td><span class="player-overall ${overallClass}">${player.overall}</span></td>
-            <td>${player.starting ? '<span class="status-starting">Starting</span>' : 
-                               '<span class="status-sub">Sub</span>'}</td>
+            <td>${isStarting ? '<span class="status-starting">Starting</span>' : 
+                               (isOnBench ? '<span class="status-bench">Bench</span>' : '<span class="status-sub">Sub</span>')}</td>
         `;
-
-        if (player.starting) tr.classList.add('player-starting');
+        if (isStarting) tr.classList.add('player-starting');
+        if (isOnBench) tr.classList.add('player-bench');
         
         return tr;
     },

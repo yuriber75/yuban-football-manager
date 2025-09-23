@@ -1065,6 +1065,22 @@ select, input {
     border-radius: 8px;
 }
 
+/* Bench highlighting in roster */
+tr.player-bench {
+    background: rgba(234, 179, 8, 0.15); /* amber-500/15 */
+}
+.roster-table tr.player-bench:hover,
+tr.player-bench:hover {
+    background: rgba(234, 179, 8, 0.22); /* slightly stronger on hover */
+}
+.status-bench {
+    background: #fbbf24; /* amber-400 */
+    color: #111;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
 .player-slot {
     background: #161b22;
     border: 1px solid #2d3748;

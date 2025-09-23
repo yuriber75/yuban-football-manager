@@ -267,6 +267,24 @@ window.GAME_CONSTANTS = {
 		SPONSOR_PAYMENT_INTERVAL: 'weekly',
 		SPONSOR_BONUS_WIN: 0.1,  // Bonus 100,000 per vittoria
 		SPONSOR_BONUS_TROPHY: 5,  // Bonus 5M per trofeo
+			// Elenco marchi sponsor fittizi per immersione
+			SPONSOR_BRANDS: [
+				"NovaTech",
+				"QuantumWear",
+				"Apex Motors",
+				"Skyline Airways",
+				"Stellar Bank",
+				"Orbit Telecom",
+				"Vertex Energy",
+				"Titan Tools",
+				"Helix Health",
+				"Nimbus Cloud",
+				"Pioneer Foods",
+				"Ultrix Electronics",
+				"Aurora Drinks",
+				"Summit Insurance",
+				"Vector Logistics"
+			],
 		
 		// Trasferimenti
 		MIN_TRANSFER_VALUE: 1,      // 1M minimo

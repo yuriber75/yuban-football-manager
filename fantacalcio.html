@@ -114,6 +114,10 @@
 									<div id="startingXI" class="pitch-view">
 										<!-- Il campo verrà generato dinamicamente -->
 									</div>
+									<div class="tactics-actions" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+										<button id="autopick" class="btn-secondary">Autopick</button>
+										<button id="clear" class="btn-warn">Clear</button>
+									</div>
 								</div>
 								
 							</div>
@@ -190,6 +194,10 @@
 								<div class="stat-row">
 									<label>Cash Balance</label>
 									<div class="value" id="cashBalance">€0M</div>
+								</div>
+								<div class="stat-row">
+									<label>Sponsor Brands</label>
+									<div class="value" id="sponsorBrands">-</div>
 								</div>
 								<div class="stat-row">
 									<label>Weekly Income</label>
@@ -378,7 +386,10 @@
 					<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
 						<div class="card">
 							<h4>League Table</h4>
-							<table id="leagueTable"></table>
+							<table id="leagueTable" class="league-table">
+								<thead></thead>
+								<tbody></tbody>
+							</table>
 						</div>
 						<div class="card">
 							<h4>Match Schedule</h4>
@@ -387,6 +398,11 @@
 								<div id="fixtures" class="fixtures-list"></div>
 							</div>
 						</div>
+					</div>
+
+					<div class="card" style="margin-top:16px">
+						<h4>All Matchdays</h4>
+						<div id="allWeeksResults" class="all-weeks"></div>
 					</div>
 				</div>
 				

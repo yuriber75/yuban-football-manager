@@ -33,8 +33,10 @@ window.marketNegotiations  = {
 			return false;
 		}
 
-		if (STATE.negotiations.rejectedPlayers.has(player.id)) {
-			window.marketUtils.showNotification('Offer submitted. The player will respond after the next match.');('This player is no longer interested in negotiations.');
+		// Blocca se il giocatore non è più interessato o ha raggiunto il limite di tentativi
+		const attempts = STATE.negotiations.attemptsCount[player.id] || 0;
+		if (STATE.negotiations.rejectedPlayers.has(player.id) || attempts >= 3) {
+			window.marketUtils.showNotification('This player is no longer interested in negotiations.');
 			return false;
 		}
 
@@ -65,8 +67,8 @@ window.marketNegotiations  = {
 			nextWeek: STATE.league.week + 1
 		});
 		
-		window.marketDisplay.updateTransferList();
-		window.marketUtils.showNotification('Offer submitted. The player will respond after the next match.');('Offer submitted. The player will respond after the next match.');
+	window.marketDisplay.updateTransferList();
+	window.marketUtils.showNotification('Offer submitted. The player will respond after the next match.');
 		saveState();
 		return true;
 	},	

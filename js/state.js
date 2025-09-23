@@ -68,6 +68,14 @@ window.loadState = function() {
             if (!team.finances) {
                 team.finances = teamGenerator.generateTeamFinances();
             }
+            // Backfill sponsor brand names if missing
+            const F = GAME_CONSTANTS.FINANCE;
+            if (!team.finances.sponsorTechBrand || !team.finances.sponsorShirtBrand) {
+                const brands = F.SPONSOR_BRANDS || [];
+                const pickBrand = () => brands.length ? brands[Math.floor(Math.random() * brands.length)] : null;
+                team.finances.sponsorTechBrand = team.finances.sponsorTechBrand || pickBrand();
+                team.finances.sponsorShirtBrand = team.finances.sponsorShirtBrand || pickBrand();
+            }
             
             // Inizializza le tattiche se mancanti
             if (!team.tactics) {
