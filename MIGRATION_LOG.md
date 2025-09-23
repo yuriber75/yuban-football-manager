@@ -38,3 +38,7 @@ Next steps:
 ## 2025-09-22 (cont. 5)
 - Updated team generator to produce squads with 3 GK, 7 DF, 7 MF, 4 FW by role distribution.
 - My Team tab now groups roster by role and shows a field preview that places the selected XI by section; DnD full assignment can be added next.
+
+## 2025-09-23
+- Authored `docs/MARKET_NEGOTIATIONS_PARITY.md`: side-by-side comparison of vanilla vs React negotiation/transfer flows and an integration plan (schema normalization, validations parity, acceptance calculator, competing-offer generator, and Offers UX).
+- Next: implement Phase 1 (offer schema normalization) and wire weekly resolution hooks uniformly.

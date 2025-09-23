@@ -439,11 +439,12 @@ export function MarketProvider({ children }) {
       const neg = ensureNegotiations(s)
       if (!neg.pendingOffers.length) return s
       const week = s.league.week
-      // Group offers by player
+      // Group offers by player (only offers expiring this week, vanilla parity)
       const byPlayer = new Map()
       for (const o of neg.pendingOffers) {
         if (o.status !== 'pending') continue
-        if (o.incoming && o.requiresDecision) continue // wait for user
+        if (o.incoming && o.requiresDecision) continue // wait for user action
+        if (o.deadlineWeek !== week) continue // only resolve offers due this week
         const key = o.playerId
         if (!byPlayer.has(key)) byPlayer.set(key, [])
         byPlayer.get(key).push(o)
@@ -516,8 +517,8 @@ export function MarketProvider({ children }) {
           }
         }
       })
-      // Decrement deadlines and expire
-      pending = pending.map(o => (o.status === 'pending' && o.deadlineWeek <= week) ? { ...o, status: 'expired' } : o)
+  // Expire offers that hit their deadline this week
+  pending = pending.map(o => (o.status === 'pending' && o.deadlineWeek === week) ? { ...o, status: 'expired' } : o)
       return { ...next, negotiations: { ...neg, pendingOffers: pending } }
     })
     saveNow()
