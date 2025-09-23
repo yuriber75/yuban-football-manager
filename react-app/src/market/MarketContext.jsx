@@ -105,14 +105,26 @@ export function MarketProvider({ children }) {
     return { player: null, team: null }
   }
 
-  function canAffordWage(team, wage) {
-    const current = team.players.reduce((sum, p) => sum + (p.wage || 0), 0)
-    return current + wage <= (team.finances?.wageBudget || GAME_CONSTANTS.FINANCE.INITIAL_WAGE_BUDGET)
+  // Pending commitments for a team (outgoing buy offers still pending)
+  function getPendingCommitments(teamName, s = state) {
+    const neg = s.negotiations || { pendingOffers: [] }
+    const offers = (neg.pendingOffers || []).filter(o => o.status === 'pending' && o.buyer === teamName)
+    const pendingFees = offers.reduce((sum, o) => sum + (o.type === 'transfer' ? (o.amount || 0) : 0), 0)
+    const pendingWages = offers.reduce((sum, o) => sum + (o.wage || 0), 0)
+    return { pendingFees, pendingWages }
   }
-  function wageWarning(team, addWage = 0) {
+
+  function canAffordWage(team, wage, s = state) {
+    const current = team.players.reduce((sum, p) => sum + (p.wage || 0), 0)
+    const { pendingWages } = getPendingCommitments(team.name, s)
+    const planned = current + pendingWages + (wage || 0)
+    return planned <= (team.finances?.wageBudget || GAME_CONSTANTS.FINANCE.INITIAL_WAGE_BUDGET)
+  }
+  function wageWarning(team, addWage = 0, s = state) {
     const budget = team.finances?.wageBudget || GAME_CONSTANTS.FINANCE.INITIAL_WAGE_BUDGET
     const current = team.players.reduce((sum, p) => sum + (p.wage || 0), 0)
-    const ratio = (current + addWage) / Math.max(0.0001, budget)
+    const { pendingWages } = getPendingCommitments(team.name, s)
+    const ratio = (current + pendingWages + addWage) / Math.max(0.0001, budget)
     return ratio >= (GAME_CONSTANTS.FINANCE.WAGE_BUDGET_WARNING_THRESHOLD || 0.9)
   }
   function getRoleCounts(team) {
@@ -166,10 +178,13 @@ export function MarketProvider({ children }) {
     if (willViolateMinOnSell(team, playerId)) return { ok: false, reason: 'Would break minimum squad/role' }
     return { ok: true }
   }
-  function canBuy(player, fee, buyer) {
+  function canBuy(player, fee, buyer, opts = {}, s = state) {
     if (!buyer?.finances) return { ok: false, reason: 'No finances' }
-    if ((buyer.finances.cash ?? 0) < fee) return { ok: false, reason: 'Insufficient cash' }
-    if (!canAffordWage(buyer, player.wage)) return { ok: false, reason: 'Wage budget exceeded' }
+    const { pendingFees } = getPendingCommitments(buyer.name, s)
+    const cash = (buyer.finances.cash ?? 0)
+    if (cash < fee + pendingFees) return { ok: false, reason: 'Insufficient cash (with pending offers)' }
+    const wageToCheck = (opts.wage != null ? opts.wage : player.wage) || 0
+    if (!canAffordWage(buyer, wageToCheck, s)) return { ok: false, reason: 'Wage budget exceeded (with pending offers)' }
     if (buyer.players.length >= GAME_CONSTANTS.FINANCE.MAX_SQUAD_SIZE) return { ok: false, reason: 'Squad size limit' }
     if (wouldExceedMaxOnBuy(buyer, player)) return { ok: false, reason: 'Would exceed per-role max' }
     return { ok: true }
@@ -192,7 +207,7 @@ export function MarketProvider({ children }) {
       const { player } = findPlayerById(playerId, s)
       if (!player) return s
       const buyer = s.teams[myIdx]
-      const buyCheck = canBuy(player, amount, buyer)
+      const buyCheck = canBuy(player, amount, buyer, { wage }, s)
       if (!buyCheck.ok) return s
       const neg = ensureNegotiations(s)
       const id = crypto.randomUUID?.() || Math.random().toString(36).slice(2)
@@ -231,7 +246,7 @@ export function MarketProvider({ children }) {
       const buyer = s.teams.find(t => t.name === buyerName)
       if (!buyer) return s
       if (wouldExceedMaxOnBuy(buyer, player)) return s
-      if (!canAffordWage(buyer, wage)) return s
+      if (!canAffordWage(buyer, wage, s)) return s
       const neg = ensureNegotiations(s)
       const id = crypto.randomUUID?.() || Math.random().toString(36).slice(2)
       const offer = { id, playerId, seller: null, buyer: buyerName, type: 'free', amount: 0, wage: Number(wage.toFixed(2)), contractLength, team: buyerName, deadlineWeek: s.league.week + 1, status: 'pending' }
@@ -275,7 +290,7 @@ export function MarketProvider({ children }) {
           effWage = Number(headroom.toFixed(2))
         }
       }
-      const check = canBuy({ ...player, wage: effWage }, offer.amount, buyer)
+      const check = canBuy({ ...player, wage: effWage }, offer.amount, buyer, { wage: effWage }, s)
       if (!check.ok) {
         // mark rejected due to affordability
         const pendingOffers = neg.pendingOffers.map(o => o.id === offerId ? { ...o, status: 'rejected' } : o)
@@ -464,7 +479,7 @@ export function MarketProvider({ children }) {
           const buyerIdx = next.teams.findIndex(t => t.name === best.buyer)
           if (buyerIdx < 0) return
           const buyer = ensureTeamMarketFinances(next.teams[buyerIdx])
-          if (!canAffordWage(buyer, best.wage)) return
+          if (!canAffordWage(buyer, best.wage, next)) return
           // Accept chance rises with wage vs player's baseline and contract length appropriateness by age
           const rel = (best.wage / Math.max(0.01, player.wage))
           const agePref = (player.age <= 23 ? (best.contractLength >= 3 ? +0.08 : -0.04)
@@ -502,7 +517,7 @@ export function MarketProvider({ children }) {
                           : (best.contractLength >= 1 ? 0 : -0.02))
           const starBias = player.overall >= 86 ? -0.08 : player.overall >= 80 ? -0.04 : player.overall <= 65 ? +0.05 : 0
           const pAccept = Math.min(0.96, Math.max(0.04, 0.38 + (feeRel - (ranges.TRANSFER_FEE.PREFERRED || 1.0)) * 0.85 + agePref + starBias))
-          const can = canBuy(player, best.amount, buyer)
+          const can = canBuy(player, best.amount, buyer, { wage: best.wage }, next)
           if (can.ok && Math.random() < pAccept) {
             const buyerFin = { ...buyer.finances, cash: Number(((buyer.finances.cash || 0) - best.amount).toFixed(GAME_CONSTANTS.FINANCE.DECIMAL_PLACES)) }
             const sellerFin = { ...seller.finances, cash: Number(((seller.finances.cash || 0) + best.amount).toFixed(GAME_CONSTANTS.FINANCE.DECIMAL_PLACES)) }
