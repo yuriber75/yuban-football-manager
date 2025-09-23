@@ -22,11 +22,67 @@ export default function Market() {
   const [faBid, setFaBid] = useState({}) // { [playerId]: { wage, len } }
   const [tlBid, setTlBid] = useState({}) // { [playerId]: { fee, wage, len } }
   const [myAskings, setMyAskings] = useState({}) // { [playerId]: asking }
+  const [faSort, setFaSort] = useState({ key: 'overall', dir: 'desc' })
+  const [tlSort, setTlSort] = useState({ key: 'asking', dir: 'desc' })
 
   useEffect(() => { market.initMarketIfNeeded() }, [])
 
   const myTeam = useMemo(() => state.teams.find(t => t.name === state.teamName), [state])
   const transferList = useMemo(() => market.aggregateTransferList(state), [state])
+
+  const toggleSort = (sort, setSort, key) => {
+    if (sort.key === key) setSort({ key, dir: sort.dir === 'asc' ? 'desc' : 'asc' })
+    else setSort({ key, dir: 'asc' })
+  }
+  const arrow = (sort, key) => sort.key === key ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : ''
+
+  const sortedFreeAgents = useMemo(() => {
+    const arr = (state.freeAgents || []).slice()
+    const dir = faSort.dir === 'asc' ? 1 : -1
+    const val = (p, key) => {
+      if (key === 'name') return p.name || ''
+      if (key === 'role') return p.primaryRole || ''
+      if (key === 'overall') return Number(p.overall || 0)
+      if (key === 'age') return Number(p.age || 0)
+      if (key === 'wage') return Number(p.wage || 0)
+      return 0
+    }
+    arr.sort((a,b) => {
+      const A = val(a, faSort.key)
+      const B = val(b, faSort.key)
+      if (typeof A === 'string' || typeof B === 'string') return A.localeCompare(B) * dir
+      return (A - B) * dir
+    })
+    return arr
+  }, [state.freeAgents, faSort])
+
+  const transferListRows = useMemo(() => {
+    const rows = (transferList || [])
+      .map(e => {
+        const found = market.findPlayerById(e.playerId, state) || {}
+        const p = found.player
+        if (!p) return null
+        return { e, p }
+      })
+      .filter(Boolean)
+    const dir = tlSort.dir === 'asc' ? 1 : -1
+    const val = (row, key) => {
+      if (key === 'player') return row.p.name || ''
+      if (key === 'role') return row.p.primaryRole || ''
+      if (key === 'overall') return Number(row.p.overall || 0)
+      if (key === 'age') return Number(row.p.age || 0)
+      if (key === 'team') return row.e.team || ''
+      if (key === 'asking') return Number(row.e.asking || 0)
+      return 0
+    }
+    rows.sort((a,b) => {
+      const A = val(a, tlSort.key)
+      const B = val(b, tlSort.key)
+      if (typeof A === 'string' || typeof B === 'string') return A.localeCompare(B) * dir
+      return (A - B) * dir
+    })
+    return rows
+  }, [transferList, tlSort, state])
 
   return (
     <div>
@@ -34,7 +90,6 @@ export default function Market() {
         <button className={`tab ${tab === 'freeAgents' ? 'active' : ''}`} onClick={() => setTab('freeAgents')}>Free Agents</button>
         <button className={`tab ${tab === 'transfer' ? 'active' : ''}`} onClick={() => setTab('transfer')}>Transfer List</button>
         <button className={`tab ${tab === 'myplayers' ? 'active' : ''}`} onClick={() => setTab('myplayers')}>My Players</button>
-        <button className={`tab ${tab === 'mylisted' ? 'active' : ''}`} onClick={() => setTab('mylisted')}>My Listed</button>
         <button className={`tab ${tab === 'offers' ? 'active' : ''}`} onClick={() => setTab('offers')}>Offers</button>
       </div>
 
@@ -43,16 +98,16 @@ export default function Market() {
           <table className="roster-table roster-compact">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Role</th>
-                <th>OVR</th>
-                <th>Age</th>
-                <th>Wage (€/wk)</th>
+                <th style={{cursor:'pointer'}} onClick={()=> toggleSort(faSort, setFaSort, 'name')}>Name{arrow(faSort,'name')}</th>
+                <th style={{cursor:'pointer'}} onClick={()=> toggleSort(faSort, setFaSort, 'role')}>Role{arrow(faSort,'role')}</th>
+                <th style={{cursor:'pointer'}} onClick={()=> toggleSort(faSort, setFaSort, 'overall')}>OVR{arrow(faSort,'overall')}</th>
+                <th style={{cursor:'pointer'}} onClick={()=> toggleSort(faSort, setFaSort, 'age')}>Age{arrow(faSort,'age')}</th>
+                <th style={{cursor:'pointer'}} onClick={()=> toggleSort(faSort, setFaSort, 'wage')}>Wage (€/wk){arrow(faSort,'wage')}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {state.freeAgents.map((p) => {
+              {sortedFreeAgents.map((p) => {
                 const cfg = faBid[p.id] || { wage: p.wage, len: 2 }
                 const warn = market.wageWarning(myTeam, cfg.wage)
                 const afford = market.canAffordWage(myTeam, cfg.wage)
@@ -116,19 +171,17 @@ export default function Market() {
           <table className="roster-table roster-compact">
             <thead>
               <tr>
-                <th>Player</th>
-                <th>Role</th>
-                <th>OVR</th>
-                <th>Age</th>
-                <th>Team</th>
-                <th>Asking (M)</th>
+                <th style={{cursor:'pointer'}} onClick={()=> toggleSort(tlSort, setTlSort, 'player')}>Player{arrow(tlSort,'player')}</th>
+                <th style={{cursor:'pointer'}} onClick={()=> toggleSort(tlSort, setTlSort, 'role')}>Role{arrow(tlSort,'role')}</th>
+                <th style={{cursor:'pointer'}} onClick={()=> toggleSort(tlSort, setTlSort, 'overall')}>OVR{arrow(tlSort,'overall')}</th>
+                <th style={{cursor:'pointer'}} onClick={()=> toggleSort(tlSort, setTlSort, 'age')}>Age{arrow(tlSort,'age')}</th>
+                <th style={{cursor:'pointer'}} onClick={()=> toggleSort(tlSort, setTlSort, 'team')}>Team{arrow(tlSort,'team')}</th>
+                <th style={{cursor:'pointer'}} onClick={()=> toggleSort(tlSort, setTlSort, 'asking')}>Asking (M){arrow(tlSort,'asking')}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {transferList.map((e) => {
-                const { player } = market.findPlayerById(e.playerId, state) || {}
-                if (!player) return null
+              {transferListRows.map(({ e, p: player }) => {
                 const cfg = tlBid[player.id] || { fee: e.asking, wage: player.wage, len: 3 }
                 const check = market.canBuy(player, cfg.fee, myTeam, { wage: cfg.wage })
                 const warn = market.wageWarning(myTeam, cfg.wage)
@@ -223,7 +276,7 @@ export default function Market() {
                   const can = market.canListWithReason(myTeam, p.id)
                   const title = listed ? `Listed at ${moneyM(listed.asking)}` : (can.ok ? '' : can.reason)
                   return (
-                    <tr key={p.id}>
+                    <tr key={p.id} className={listed ? 'highlight-amber' : undefined}>
                       <td>{p.name}</td>
                       <td>{p.primaryRole}</td>
                       <td>{p.overall}</td>
@@ -256,38 +309,6 @@ export default function Market() {
                     </tr>
                   )
                 })}
-            </tbody>
-          </table>
-        </Section>
-      )}
-
-      {tab === 'mylisted' && myTeam && (
-        <Section title={`My Listed (${(myTeam.finances?.playersForSale || []).length})`}>
-          <table className="roster-table roster-compact">
-            <thead>
-              <tr>
-                <th>Player</th>
-                <th>Role</th>
-                <th>OVR</th>
-                <th>Asking (M)</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {(myTeam.finances?.playersForSale || []).map((e) => {
-                const p = myTeam.players.find((pp) => pp.id === e.id)
-                if (!p) return null
-                const moneyM = (v) => formatMillions(v, { decimals: 2 })
-                return (
-                  <tr key={e.id}>
-                    <td>{p.name}</td>
-                    <td>{p.primaryRole}</td>
-                    <td>{p.overall}</td>
-                    <td>{moneyM(e.asking)}</td>
-                    <td><button onClick={() => setConfirm({ open: true, message: `Remove ${p.name} from your transfer list?`, onConfirm: () => { market.unlistPlayer(e.id); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })}>Remove</button></td>
-                  </tr>
-                )
-              })}
             </tbody>
           </table>
         </Section>
@@ -353,13 +374,24 @@ export default function Market() {
                   if (!player) return null
                   const money = (v) => formatMillions(v, { decimals: 2 })
                   const stats = market.getOfferStatsForPlayer(o.playerId)
+                  // Soft status for consideration window
+                  let softStatus = null
+                  if (o.status === 'pending' && typeof o.submittedWeek === 'number' && typeof o.decisionAfterWeeks === 'number') {
+                    const week = state.league?.week ?? o.submittedWeek
+                    const elapsed = Math.max(0, week - o.submittedWeek)
+                    const total = o.decisionAfterWeeks
+                    const current = Math.min(total, elapsed + 1)
+                    if ((o.deadlineWeek ?? (o.submittedWeek + total)) > week) {
+                      softStatus = `under consideration (week ${current} of ${total})`
+                    }
+                  }
                   return (
                     <tr key={o.id} className={o.status !== 'pending' ? (o.status === 'accepted' ? 'row-accepted' : 'row-inactive') : ''}>
                       <td>{player.name}</td>
                       <td>{o.seller || 'Free Agent'}</td>
                       <td>{o.type === 'free' ? `W: ${money(o.wage)} /wk` : `F: ${money(o.amount)}, W: ${money(o.wage)} /wk`}</td>
                       <td>
-                        {o.status}
+                        {softStatus ? softStatus : o.status}
                         {o.status === 'pending' && stats.total > 0 && (
                           <span className="hint" style={{ marginLeft: 6 }} title="Best offer wins at deadline">
                             Competing: {stats.total}{stats.rankOfMine ? ` (your rank ${stats.rankOfMine}/${stats.total})` : ''}
