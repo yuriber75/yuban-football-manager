@@ -42,4 +42,6 @@ Next steps:
 ## 2025-09-23
 - Authored `docs/MARKET_NEGOTIATIONS_PARITY.md`: side-by-side comparison of vanilla vs React negotiation/transfer flows and an integration plan (schema normalization, validations parity, acceptance calculator, competing-offer generator, and Offers UX).
 - React parity Phase 1 (done): Adjusted weekly cadence to resolve negotiations before market churn; `resolveNegotiations()` now processes only offers expiring in the current week and expires strictly at deadline.
-- React parity Phase 2 (in progress): Added pending-cost checks to React validations (cash and wages) so affordability includes cumulative pending offers.
+ - React parity Phase 2 (progress):
+	 - Added pending-cost checks to React validations (cash and wages) so affordability includes cumulative pending offers.
+	 - Centralized acceptance calculator in React (`MarketContext.jsx`) for FA and transfers to mirror vanilla tolerances and age/length/star adjustments; replaced inline formulas in resolver.
