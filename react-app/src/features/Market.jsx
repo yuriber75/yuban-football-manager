@@ -19,6 +19,7 @@ export default function Market() {
   const market = useMarket()
   const [tab, setTab] = useState('freeAgents')
   const [confirm, setConfirm] = useState({ open: false })
+  const [contractModal, setContractModal] = useState({ open: false, playerId: null, wage: '', years: 1 })
   const [faBid, setFaBid] = useState({}) // { [playerId]: { wage, len } }
   const [tlBid, setTlBid] = useState({}) // { [playerId]: { fee, wage, len } }
   const [myAskings, setMyAskings] = useState({}) // { [playerId]: asking }
@@ -28,6 +29,7 @@ export default function Market() {
   useEffect(() => { market.initMarketIfNeeded() }, [])
 
   const myTeam = useMemo(() => state.teams.find(t => t.name === state.teamName), [state])
+  const admin = !!myTeam?.finances?.inAdministration
   const transferList = useMemo(() => market.aggregateTransferList(state), [state])
 
   const toggleSort = (sort, setSort, key) => {
@@ -86,7 +88,7 @@ export default function Market() {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+      <div className="subtabs">
         <button className={`tab ${tab === 'freeAgents' ? 'active' : ''}`} onClick={() => setTab('freeAgents')}>Free Agents</button>
         <button className={`tab ${tab === 'transfer' ? 'active' : ''}`} onClick={() => setTab('transfer')}>Transfer List</button>
         <button className={`tab ${tab === 'myplayers' ? 'active' : ''}`} onClick={() => setTab('myplayers')}>My Players</button>
@@ -150,7 +152,7 @@ export default function Market() {
                     </div>
                   </td>
                   <td>
-                    <button title={title} onClick={() => setConfirm({ open: true, message: `Bid for ${p.name} at ${moneyWage(cfg.wage)} /wk for ${cfg.len}y?`, onConfirm: () => { market.submitOfferForFreeAgent(p.id, cfg.wage, cfg.len); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })} disabled={disabled}>Bid</button>
+                    <button title={admin ? 'Blocked under administration' : title} onClick={() => setConfirm({ open: true, title: 'Confirm offer', message: `Propose an offer: ${p.name} at ${moneyWage(cfg.wage)} /wk for ${cfg.len}y?`, confirmText: 'Confirm', cancelText: 'Cancel', onConfirm: () => { market.submitOfferForFreeAgent(p.id, cfg.wage, cfg.len); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })} disabled={disabled || admin}>Bid</button>
                     {stats.total > 0 && (
                       <span className="hint" style={{ marginLeft: 6 }} title="Best offer wins at deadline">
                         Competing offers: {stats.total}{stats.rankOfMine ? ` (your rank ${stats.rankOfMine}/${stats.total})` : ''}
@@ -233,7 +235,7 @@ export default function Market() {
                         <span>Len</span>
                         <input style={{ width: 46 }} type="number" min={GAME_CONSTANTS.FINANCE.MIN_CONTRACT_LENGTH} max={GAME_CONSTANTS.FINANCE.MAX_CONTRACT_LENGTH} value={cfg.len}
                           onChange={(e)=> setTlBid(prev => ({ ...prev, [player.id]: { ...(prev[player.id]||{}), len: Math.max(GAME_CONSTANTS.FINANCE.MIN_CONTRACT_LENGTH, Math.min(GAME_CONSTANTS.FINANCE.MAX_CONTRACT_LENGTH, Number(e.target.value)||3)) } }))} />
-                        <button title={check.ok ? (warn ? 'Warning: near wage cap' : '') : (tooltip || check.reason)} onClick={() => setConfirm({ open: true, message: `Bid ${moneyM(cfg.fee)} + wage ${moneyWage(cfg.wage)} /wk for ${player.name} (${cfg.len}y)?`, onConfirm: () => { market.submitOfferForListed(player.id, e.team, cfg.fee, cfg.wage, cfg.len); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })} disabled={!check.ok}>Bid</button>
+                        <button title={admin ? 'Blocked under administration' : (check.ok ? (warn ? 'Warning: near wage cap' : '') : (tooltip || check.reason))} onClick={() => setConfirm({ open: true, title: 'Confirm offer', message: `Propose an offer: ${player.name} — Fee ${moneyM(cfg.fee)} + Wage ${moneyWage(cfg.wage)} /wk for ${cfg.len}y?`, confirmText: 'Confirm', cancelText: 'Cancel', onConfirm: () => { market.submitOfferForListed(player.id, e.team, cfg.fee, cfg.wage, cfg.len); setConfirm({ open: false }) }, onCancel: () => setConfirm({ open: false }) })} disabled={!check.ok || admin}>Bid</button>
                         {stats.total > 0 && (
                           <span className="hint" style={{ marginLeft: 6 }} title="Best offer wins at deadline">
                             Competing offers: {stats.total}{stats.rankOfMine ? ` (your rank ${stats.rankOfMine}/${stats.total})` : ''}
@@ -259,7 +261,10 @@ export default function Market() {
                 <th>Player</th>
                 <th>Role</th>
                 <th>OVR</th>
+                <th>Age</th>
                 <th>Wage (€/wk)</th>
+                <th>Contract</th>
+                <th>Renegotiate</th>
                 <th>Value (M)</th>
                 <th>Listing</th>
                 <th></th>
@@ -280,7 +285,12 @@ export default function Market() {
                       <td>{p.name}</td>
                       <td>{p.primaryRole}</td>
                       <td>{p.overall}</td>
+                      <td>{p.age}</td>
                       <td>{formatMoney(Math.round((p.wage||0) * 1_000_000), { decimals: 0, useCommaDecimal: true })} /wk</td>
+                      <td>{typeof p.contractYearsRemaining === 'number' ? `${p.contractYearsRemaining}y` : '—'}</td>
+                      <td>
+                        <button onClick={() => setContractModal({ open: true, playerId: p.id, wage: Math.round((p.wage||0)*1_000_000), years: 1 })}>Renegotiate</button>
+                      </td>
                       <td>{moneyM(p.value || 0)}</td>
                       <td>
                         {listed ? (
@@ -314,8 +324,117 @@ export default function Market() {
         </Section>
       )}
 
+      {contractModal.open && (() => {
+        const t = state.teams.find(tt => tt.name === state.teamName)
+        const player = t?.players.find(pp => pp.id === contractModal.playerId)
+        if (!t || !player) return null
+        const minWeekly = Math.round(GAME_CONSTANTS.FINANCE.WAGE_LIMITS.MIN_WEEKLY * 1_000_000)
+        const maxWeekly = Math.round(GAME_CONSTANTS.FINANCE.WAGE_LIMITS.MAX_WEEKLY * 1_000_000)
+        const yearsMin = GAME_CONSTANTS.FINANCE.MIN_CONTRACT_LENGTH
+        const yearsMax = GAME_CONSTANTS.FINANCE.MAX_CONTRACT_LENGTH
+        const disabled = !!t.finances?.inAdministration
+        // Compute player counter-demand based on team performance and player profile
+        function getTeamPositionInfo() {
+          const table = state.league?.table || {}
+          const rows = Object.values(table)
+          if (!rows.length) return { pos: null, size: 0 }
+          const sorted = rows.slice().sort((a,b)=> (b.pts||0) - (a.pts||0))
+          const idx = sorted.findIndex(r => r.team === t.name)
+          return { pos: idx >= 0 ? idx+1 : null, size: sorted.length }
+        }
+        function computeDemand(currentWageM, age, overall) {
+          const { pos, size } = getTeamPositionInfo()
+          let perfPremium = 0
+          if (pos && size) {
+            const perfRating = (size - (pos-1)) / size // 1.0 for first, ~0 for last
+            perfPremium = 0.12 * perfRating // up to +12%
+          }
+          let baseRel = 1.0
+          if (overall >= 90) baseRel += 0.12
+          else if (overall >= 86) baseRel += 0.08
+          else if (overall >= 80) baseRel += 0.05
+          else if (overall <= 65) baseRel += 0.00
+          // Older players accept slightly less uplift
+          if (age >= 33) baseRel -= 0.03
+          const rel = Math.max(0.8, baseRel + perfPremium)
+          const demandWage = Number((currentWageM * rel).toFixed(2))
+          // Years preference by age
+          let demandYears = 1
+          if (age <= 23) demandYears = 3
+          else if (age <= 28) demandYears = 2
+          else if (age <= 32) demandYears = 1
+          else demandYears = 1
+          // Clamp to global limits
+          const wageClamped = Math.min(GAME_CONSTANTS.FINANCE.WAGE_LIMITS.MAX_WEEKLY, Math.max(GAME_CONSTANTS.FINANCE.WAGE_LIMITS.MIN_WEEKLY, demandWage))
+          const yearsClamped = Math.max(yearsMin, Math.min(yearsMax, demandYears))
+          return { wage: wageClamped, years: yearsClamped }
+        }
+        const euroToM = (eu) => Number(((eu||0)/1_000_000).toFixed(3))
+        const mToEuro = (m) => Math.round((m||0) * 1_000_000)
+        const currentWageM = Number((player.wage || 0).toFixed(3))
+        const counter = computeDemand(currentWageM, player.age, player.overall)
+        const offerWageM = euroToM(contractModal.wage)
+        const offerYears = Number(contractModal.years)
+        const meetsDemand = offerWageM >= counter.wage && offerYears >= counter.years
+        function onConfirm() {
+          const idxTeam = state.teams.findIndex(tt => tt.name === t.name)
+          if (idxTeam === -1) return setContractModal({ open: false, playerId: null, wage: '', years: 1 })
+          // If offer does not meet demand, present counter (do not close modal)
+          if (!meetsDemand) {
+            // Snap inputs to min bounds but keep modal open; user can click "Match player demand" button
+            return
+          }
+          const next = { ...state }
+          const teamCopy = { ...next.teams[idxTeam] }
+          const players = teamCopy.players.slice()
+          const idxP = players.findIndex(pp => pp.id === player.id)
+          if (idxP === -1) return setContractModal({ open: false, playerId: null, wage: '', years: 1 })
+          const euros = Math.max(minWeekly, Math.min(maxWeekly, Number(contractModal.wage)||0))
+          const wageM = Number((euros/1_000_000).toFixed(3))
+          const addYears = Math.max(yearsMin, Math.min(yearsMax, Number(contractModal.years)||1))
+          const currentYears = Number(players[idxP].contractYearsRemaining || 0)
+          players[idxP] = { ...players[idxP], wage: wageM, contractYearsRemaining: currentYears + addYears }
+          teamCopy.players = players
+          next.teams = next.teams.slice(); next.teams[idxTeam] = teamCopy
+          market.updateTeam?.(teamCopy)
+          setContractModal({ open: false, playerId: null, wage: '', years: 1 })
+        }
+        function close() { setContractModal({ open: false, playerId: null, wage: '', years: 1 }) }
+        return (
+          <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }} onClick={close}>
+            <div className="card" style={{ width: 420, maxWidth: '95vw' }} onClick={(e)=> e.stopPropagation()}>
+              <h3 style={{ marginTop: 0 }}>Renegotiate — {player.name}</h3>
+              <div className="hint" style={{ marginBottom: 8 }}>Adjust weekly salary and extend contract. Not available under administration.</div>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                <label>Weekly wage (€)</label>
+                <input style={{ width: 120 }} type="number" min={minWeekly} max={maxWeekly} step={1000} value={contractModal.wage}
+                  onChange={(e)=> setContractModal(prev => ({ ...prev, wage: Math.max(minWeekly, Math.min(maxWeekly, Number(e.target.value)||minWeekly)) }))} />
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+                <label>Extend years</label>
+                <input style={{ width: 60 }} type="number" min={yearsMin} max={yearsMax} step={1} value={contractModal.years}
+                  onChange={(e)=> setContractModal(prev => ({ ...prev, years: Math.max(yearsMin, Math.min(yearsMax, Number(e.target.value)||1)) }))} />
+              </div>
+              {!meetsDemand && (
+                <div className="hint warn" style={{ marginBottom: 12 }}>
+                  Player counter: <strong>{formatMoney(mToEuro(counter.wage), { decimals: 0, useCommaDecimal: true })} /wk</strong>, <strong>{counter.years}y</strong>
+                  <div>
+                    <button className="btn-secondary" style={{ marginTop: 6 }} onClick={() => setContractModal(prev => ({ ...prev, wage: mToEuro(counter.wage), years: counter.years }))}>Match player demand</button>
+                  </div>
+                </div>
+              )}
+              <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
+                <button className="btn-secondary" onClick={close}>Cancel</button>
+                <button disabled={disabled} onClick={onConfirm}>Confirm</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {tab === 'offers' && (
         <>
+          {admin && <div className="hint error" style={{ marginBottom: 8 }}>Transfers are blocked while your club is under administration.</div>}
           <Section title="Incoming Offers">
             <table className="roster-table roster-compact">
               <thead>

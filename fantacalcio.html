@@ -184,9 +184,31 @@
 				
 				<!-- Tab: Finance -->
 				<div id="financeContent" style="display:none">
-					<h2>Finance Overview</h2>
+					<h2>Finance</h2>
+					<!-- Subtabs (market-style) -->
+					<div class="market-tabs" id="financeTabs">
+						<button class="market-tab active" data-target="finOverview">Overview</button>
+						<button class="market-tab" data-target="finRevenues">Revenues</button>
+						<button class="market-tab" data-target="finExpenses">Expenses</button>
+						<button class="market-tab" data-target="finFacilities">Facilities</button>
+						<button class="market-tab" data-target="finStaff">Staff</button>
+						<button class="market-tab" data-target="finContracts">Contracts</button>
+						<button class="market-tab" data-target="finProjections">Projections</button>
+					</div>
+					<script>
+						(function(){
+							const tabs = document.querySelectorAll('#financeTabs .market-tab');
+							const sections = document.querySelectorAll('#financeContent .subtab-section');
+							tabs.forEach(btn => btn.addEventListener('click', () => {
+								tabs.forEach(b => b.classList.remove('active'));
+								btn.classList.add('active');
+								const id = btn.getAttribute('data-target');
+								sections.forEach(s => s.style.display = (s.id === id) ? 'block' : 'none');
+							}));
+						})();
+					</script>
 					
-					<div class="finance-grid">
+					<div id="finOverview" class="finance-grid subtab-section" style="display:block">
 						<!-- Weekly Summary -->
 						<div class="card">
 							<h3>Weekly Summary</h3>
@@ -213,7 +235,6 @@
 								</div>
 							</div>
 						</div>
-						
 						<!-- Income Details -->
 						<div class="card">
 							<h3>Income Sources</h3>
@@ -229,6 +250,14 @@
 								<div class="stat-row">
 									<label>Bonus TV Winning Income</label>
 									<div class="value" id="otherIncome">€0M</div>
+								</div>
+								<div class="stat-row">
+									<label>TV Rights</label>
+									<div class="value" id="tvRightsIncome">€0M</div>
+								</div>
+								<div class="stat-row">
+									<label>Competition Prizes</label>
+									<div class="value" id="prizesIncome">€0M</div>
 								</div>
 							</div>
 						</div>
@@ -249,7 +278,60 @@
 									<label>Other Expenses</label>
 									<div class="value" id="otherExpenses">€0M</div>
 								</div>
+								<div class="stat-row">
+									<label>Maintenance Plan</label>
+									<div class="value" id="maintPlanCosts">€0M</div>
+								</div>
+								<div class="stat-row">
+									<label>Training Facility</label>
+									<div class="value" id="trainingUpkeep">€0M</div>
+								</div>
+								<div class="stat-row">
+									<label>Medical Department</label>
+									<div class="value" id="medicalUpkeep">€0M</div>
+								</div>
+								<div class="stat-row">
+									<label>Doctors Salaries</label>
+									<div class="value" id="doctorsSalaries">€0M</div>
+								</div>
+								<div class="stat-row">
+									<label>Technical Staff</label>
+									<div class="value" id="technicalStaff">€0M</div>
+								</div>
+								<div class="stat-row">
+									<label>Clauses Provision</label>
+									<div class="value" id="clausesProvision">€0M</div>
+								</div>
 							</div>
+						</div>
+					</div>
+
+					<!-- Revenues subtab minimal placeholder -->
+					<div id="finRevenues" class="subtab-section" style="display:none">
+						<div class="card"><h3>Revenues</h3><div class="small">Detailed revenue controls coming next.</div></div>
+					</div>
+					<!-- Expenses subtab minimal placeholder -->
+					<div id="finExpenses" class="subtab-section" style="display:none">
+						<div class="card"><h3>Expenses</h3><div class="small">Detailed expense controls coming next.</div></div>
+					</div>
+					<!-- Facilities subtab minimal placeholder -->
+					<div id="finFacilities" class="subtab-section" style="display:none">
+						<div class="card"><h3>Facilities</h3><div class="small">Facility upgrades and upkeep configuration coming next.</div></div>
+					</div>
+					<!-- Staff subtab minimal placeholder -->
+					<div id="finStaff" class="subtab-section" style="display:none">
+						<div class="card"><h3>Staff</h3><div class="small">Medical department and technical staff management coming next.</div></div>
+					</div>
+					<!-- Contracts subtab minimal placeholder -->
+					<div id="finContracts" class="subtab-section" style="display:none">
+						<div class="card"><h3>Contracts</h3><div class="small">Clauses and contract provisions coming next.</div></div>
+					</div>
+					<!-- Projections subtab minimal placeholder -->
+					<div id="finProjections" class="subtab-section" style="display:none">
+						<div class="card">
+							<h3>Projections</h3>
+							<div class="small">Assumes the current weekly net stays constant.</div>
+							<svg id="projectionChart" width="100%" height="120" viewBox="0 0 320 120" preserveAspectRatio="none" style="background:#0b1420;border-radius:6px"></svg>
 						</div>
 					</div>
 					
@@ -570,6 +652,7 @@
 
 <!-- 4. I moduli UI comuni -->
 <script src="js/ui/commonUI.js"></script>
+<script src="js/playerProgression.js"></script>
 
 <!-- 5. I moduli UI specifici -->
 <script src="js/ui/financeUI.js"></script>

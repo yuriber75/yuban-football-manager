@@ -79,6 +79,8 @@ export function makeTeam(name, formation = '442') {
       GAME_CONSTANTS.FINANCE.INITIAL_ATTENDANCE,
       GAME_CONSTANTS.FINANCE.MAX_STADIUM_CAPACITY
     ),
+    stadiumCondition: GAME_CONSTANTS.FINANCE.STADIUM_CONDITION?.INITIAL ?? 0.85,
+    maintenancePlanId: 'basic',
   }
 
   return {

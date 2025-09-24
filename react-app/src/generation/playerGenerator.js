@@ -184,6 +184,7 @@ export function makePlayer(primaryRole = 'MC') {
     id: crypto.randomUUID?.() || Math.random().toString(36).slice(2),
     name: `${nameFirst} ${nameLast}`,
     age,
+    contractYearsRemaining: Math.floor(1 + Math.random() * 5),
     roles,
     primaryRole,
     stats,

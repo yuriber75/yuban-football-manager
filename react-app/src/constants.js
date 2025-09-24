@@ -1,5 +1,9 @@
 // React port of GAME_CONSTANTS. Keep shape identical to vanilla for compatibility.
 export const GAME_CONSTANTS = {
+  STORAGE: {
+    // Save key for localStorage persistence
+    SAVE_KEY: 'yuban-fm-save',
+  },
   GAME: {
     MINUTES_IN_GAME: 90,
     MAX_PLAYERS: 11,
@@ -295,6 +299,111 @@ export const GAME_CONSTANTS = {
     DECIMAL_PLACES: 3,
     MAX_SQUAD_SIZE: 25,
     MAX_PER_ROLE: { GK: 4, DEF: 9, MID: 9, ATT: 6 },
+    // New finance dimensions
+    TV_RIGHTS_DEFAULT_WEEKLY: 0.0,
+    COMPETITION_PRIZES_DEFAULT_WEEKLY: 0.0,
+    CLAUSES_PROVISION_DEFAULT_WEEKLY: 0.0,
+    STADIUM_MAINTENANCE_PLANS: [
+      { id: 'basic', label: 'Basic', weekly: 0.00 },
+      { id: 'standard', label: 'Standard', weekly: 0.05 },
+      { id: 'enhanced', label: 'Enhanced', weekly: 0.10 }
+    ],
+    STADIUM_CONDITION: {
+      INITIAL: 0.85, // 85% starting condition
+      MIN: 0.50,
+      MAX: 1.00
+    },
+    STADIUM_PLAN_EFFECTS: {
+      // attendanceMult applies as a quality factor; weeklyDecay reduces condition each week
+      basic:    { attendanceMult: 1.00, weeklyDecay: 0.005 },
+      standard: { attendanceMult: 1.03, weeklyDecay: 0.003 },
+      enhanced: { attendanceMult: 1.06, weeklyDecay: 0.0015 }
+    },
+    TRAINING_FACILITY: {
+      label: 'Training Facility',
+      levels: [
+        { cost: 6, weekly: 0.04 },
+        { cost: 10, weekly: 0.08 },
+        { cost: 16, weekly: 0.14 }
+      ],
+      AREAS: {
+        pitches: {
+          label: 'Training Pitches',
+          levels: [
+            { cost: 3, weekly: 0.020 },
+            { cost: 5, weekly: 0.040 },
+            { cost: 8, weekly: 0.070 }
+          ]
+        },
+        gym: {
+          label: 'Gym',
+          levels: [
+            { cost: 2, weekly: 0.012 },
+            { cost: 3, weekly: 0.025 },
+            { cost: 5, weekly: 0.040 }
+          ]
+        },
+        lockers: {
+          label: 'Locker Rooms',
+          levels: [
+            { cost: 1, weekly: 0.008 },
+            { cost: 2, weekly: 0.015 },
+            { cost: 3, weekly: 0.030 }
+          ]
+        }
+      }
+    },
+    MEDICAL_DEPT: {
+      label: 'Medical Department',
+      levels: [
+        { cost: 4, weekly: 0.04 },
+        { cost: 8, weekly: 0.08 },
+        { cost: 14, weekly: 0.14 }
+      ],
+      perDoctorWeekly: 0.02,
+      maxDoctors: 4
+    },
+    TECHNICAL_STAFF: [
+      { id: 'basic', label: 'Basic Staff', weekly: 0.05, boost: 0.00 },
+      { id: 'advanced', label: 'Advanced Staff', weekly: 0.10, boost: 0.01 },
+      { id: 'elite', label: 'Elite Staff', weekly: 0.20, boost: 0.02 }
+    ],
+    PROJECTION_WEEKS: 12,
+  // Default consequences when insolvency triggers (2 consecutive weeks cash < 0)
+  DEFAULT_PENALTY_MODE: 'light', // 'light' | 'points'
+  DEFAULT_PENALTY_POINTS: 3,
+    // TV rights negotiation and competition prize presets (React app)
+    TV_PROVIDERS: [
+      'EuroSport Max', 'GlobalSports', 'ArenaTV', 'PrimeBall', 'SkyField', 'NovaPlay'
+    ],
+    // Deal templates define typical mixes; actual offers will randomize within ranges
+    TV_DEAL_OPTIONS: [
+      {
+        id: 'fixed_heavy', label: 'Fixed-Heavy',
+        fixedWeeklyRange: [0.60, 0.90], // M€/wk
+        variableWeeklyRange: [0.05, 0.12], // top-team variable component M€/wk
+        durationWeeks: [26, 52]
+      },
+      {
+        id: 'balanced', label: 'Balanced',
+        fixedWeeklyRange: [0.35, 0.60],
+        variableWeeklyRange: [0.12, 0.22],
+        durationWeeks: [26, 52]
+      },
+      {
+        id: 'variable_heavy', label: 'Variable-Heavy',
+        fixedWeeklyRange: [0.18, 0.35],
+        variableWeeklyRange: [0.22, 0.40],
+        durationWeeks: [26, 52]
+      }
+    ],
+    // Simple selectable accrual presets for competition prizes
+    COMP_PRIZE_PLANS: [
+      { id: 'off', label: 'Off (one-off payouts only)', weekly: 0.00 },
+      { id: 'conservative', label: 'Conservative accrual', weekly: 0.10 },
+      { id: 'balanced', label: 'Balanced accrual', weekly: 0.25 },
+      { id: 'aggressive', label: 'Aggressive accrual', weekly: 0.50 }
+    ],
   },
   NAMES: {
 		FIRST: [

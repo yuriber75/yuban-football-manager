@@ -55,6 +55,16 @@ export default function Squad() {
 
   if (!team) return <div className="card">No team found. Start a career.</div>
 
+  // Map OVR to a rating class using thresholds in constants
+  function ratingClass(ovr) {
+    const T = GAME_CONSTANTS.UI.RATING_THRESHOLDS
+    const C = GAME_CONSTANTS.UI.RATING_CLASSES
+    if (ovr >= T.HIGH) return C.HIGH
+    if (ovr >= T.GOOD) return C.GOOD
+    if (ovr >= T.AVERAGE) return C.AVERAGE
+    return C.LOW
+  }
+
   function updateTeam(nextPlayers, nextFormation = formation) {
     const nextTeams = state.teams.map(t => t.name === team.name ? { ...t, players: nextPlayers, tactics: { ...(t.tactics||{}), formation: nextFormation } } : t)
     setState({ ...state, teams: nextTeams })
@@ -251,12 +261,13 @@ export default function Squad() {
               </h3>
               {(() => {
                 const headerSet = sec === 'GK' ? GAME_CONSTANTS.UI.HEADERS.GK.stats : GAME_CONSTANTS.UI.HEADERS.OUTFIELD.stats
-                const tableMinWidth = 220 + 70 + 56 + (56 * headerSet.length) // Name + Role + OVR + stats
+                const tableMinWidth = 220 + 48 + 70 + 56 + (56 * headerSet.length) // Name + Age + Role + OVR + stats
                 return (
                   <div className="roster-wrap">
                     <table className="roster-table" style={{ borderSpacing: 0 }}>
                       <colgroup>
                         <col className="col-name" style={{ width: 220 }} />
+                        <col className="col-age" style={{ width: 48 }} />
                         <col className="col-role" style={{ width: 70 }} />
                         <col className="col-ovr" style={{ width: 56 }} />
                         {headerSet.map(h => (
@@ -266,6 +277,7 @@ export default function Squad() {
                       <thead>
                         <tr>
                           <th style={{ textAlign: 'left', padding: '4px 6px' }}>Name</th>
+                          <th style={{ textAlign: 'left', padding: '4px 6px' }}>Age</th>
                           <th style={{ textAlign: 'left', padding: '4px 6px' }}>Role</th>
                           <th style={{ textAlign: 'left', padding: '4px 6px' }}>OVR</th>
                           {headerSet.map(h => (
@@ -282,8 +294,11 @@ export default function Squad() {
                               className={p.benchIndex !== undefined ? 'bench-row' : (p.slot ? '' : '')}
                               style={{ background: p.slot ? 'rgba(34,197,94,0.10)' : undefined }}>
                             <td style={{ textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '4px 6px' }}>#{p.number} {p.name}</td>
+                            <td style={{ textAlign: 'left', padding: '4px 6px' }}>{p.age}</td>
                             <td style={{ textAlign: 'left', padding: '4px 6px' }}>{(Array.isArray(p.roles) && p.roles.length ? p.roles : [p.primaryRole]).join('/')}</td>
-                            <td style={{ textAlign: 'left', padding: '4px 6px' }} className="value" data-value={p.overall}>{p.overall}</td>
+                            <td style={{ textAlign: 'left', padding: '4px 6px' }}>
+                              <span className={`ovr-pill ${ratingClass(p.overall)}`}>{p.overall}</span>
+                            </td>
                             {/* Removed Action (List/Unlist) column for finance parity */}
                             {headerSet.map(h => (
                               <td key={h.key} className="stat-col value" style={{ textAlign: 'left', padding: '4px 6px' }}>{p.stats[h.key] ?? p[h.key]}</td>
@@ -299,32 +314,38 @@ export default function Squad() {
           ))}
         </div>
 
-        {/* Middle: field with DnD positions */}
-  <div className="table-container col-field" style={{ flex: '0 0 40%', minWidth: 0 }}>
-          <div className="row2" style={{ alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              <label style={{ marginRight: 6 }}>Formation</label>
-              <select value={formation} onChange={onChangeFormation}>
-                {Object.keys(GAME_CONSTANTS.FORMATIONS).map(f => (
-                  <option key={f} value={f}>{f.slice(0,1)}-{f.slice(1,2)}-{f.slice(2)}</option>
-                ))}
-              </select>
-              <label style={{ marginLeft: 8 }}>Pressing</label>
-              <select value={pressing} onChange={(e)=>{ setPressing(e.target.value); updateTactics({ pressing: e.target.value }) }}>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-              <label style={{ marginLeft: 8 }}>Verticalizzazione</label>
-              <select value={verticalization} onChange={(e)=>{ setVerticalization(e.target.value); updateTactics({ verticalization: e.target.value }) }}>
-                <option value="long_balls">Lanci lunghi</option>
-                <option value="horizontal">Passaggi orizzontali</option>
-                <option value="neutral">Neutrale</option>
-              </select>
+    {/* Middle: field with DnD positions (fixed 700px width) */}
+  <div className="table-container col-field" style={{ flex: '0 0 700px', width: 700, minWidth: 700 }}>
+          <div className="row2 control-bar" style={{ alignItems: 'stretch', justifyContent: 'flex-start', marginBottom: 8, flexWrap: 'wrap', gap: 12 }}>
+            <div className="control-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, width: '100%' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label className="control-label">Formation</label>
+                <select className="ui-select" value={formation} onChange={onChangeFormation}>
+                  {Object.keys(GAME_CONSTANTS.FORMATIONS).map(f => (
+                    <option key={f} value={f}>{f.slice(0,1)}-{f.slice(1,2)}-{f.slice(2)}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label className="control-label">Pressing</label>
+                <select className="ui-select" value={pressing} onChange={(e)=>{ setPressing(e.target.value); updateTactics({ pressing: e.target.value }) }}>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label className="control-label">Verticality</label>
+                <select className="ui-select" value={verticalization} onChange={(e)=>{ setVerticalization(e.target.value); updateTactics({ verticalization: e.target.value }) }}>
+                  <option value="long_balls">Long Balls</option>
+                  <option value="horizontal">Horizontal</option>
+                  <option value="neutral">Neutral</option>
+                </select>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button className="btn-secondary" onClick={autoPick} style={{ width: 'auto' }}>Autopick</button>
-              <button className="btn-warn" onClick={clearStarters} style={{ width: 'auto' }}>Clear</button>
+            <div className="control-actions" style={{ display: 'flex', gap: 10, width: '100%', justifyContent: 'flex-end' }}>
+              <button className="btn-secondary" onClick={autoPick} style={{ width: 'auto', whiteSpace: 'nowrap' }}>Autopick</button>
+              <button className="btn-warn" onClick={clearStarters} style={{ width: 'auto', whiteSpace: 'nowrap' }}>Clear</button>
             </div>
           </div>
           <h3>Starting XI — drag players here</h3>

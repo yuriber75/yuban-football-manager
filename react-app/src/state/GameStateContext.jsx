@@ -62,7 +62,7 @@ function hydrate(raw) {
   parsed.negotiations = parsed.negotiations || {}
   parsed.negotiations.pendingOffers = parsed.negotiations.pendingOffers || []
   parsed.negotiations.rejectedPlayers = new Set(parsed.negotiations.rejectedPlayers || [])
-  parsed.negotiations.attemptsCount = parsed.negotiations.attemptsCount || {}
+    parsed.negotiations.attemptsCount = parsed.negotiations.attemptsCount || {}
 
   function roleSection(role) {
     if (role === 'GK') return 'GK'
@@ -106,7 +106,8 @@ function hydrate(raw) {
         wageBudget: GAME_CONSTANTS.FINANCE.INITIAL_WAGE_BUDGET,
         stadiumCapacity: GAME_CONSTANTS.FINANCE.MIN_STADIUM_CAPACITY,
         attendance: GAME_CONSTANTS.FINANCE.INITIAL_ATTENDANCE,
-        stadiumCondition: team.finances?.stadiumCondition || GAME_CONSTANTS.FINANCE.MIN_STADIUM_CONDITION || 0.8,
+          stadiumCondition: (team.finances?.stadiumCondition ?? GAME_CONSTANTS.FINANCE.STADIUM_CONDITION?.INITIAL ?? 0.85),
+          maintenancePlanId: team.finances?.maintenancePlanId || 'basic',
         loans: Array.isArray(team.finances?.loans) ? team.finances.loans : [],
         ...(team.finances || {}),
         sponsorContract: team.finances?.sponsorContract || null,
@@ -120,7 +121,7 @@ function hydrate(raw) {
         const maxW = GAME_CONSTANTS.FINANCE.MAX_PLAYER_WAGE
         if (!isFinite(w) || isNaN(w)) w = minW
         w = Math.max(minW, Math.min(maxW, Number(w.toFixed(2))))
-        return { ...p, wage: w }
+        return { ...p, wage: w, contractYearsRemaining: (typeof p.contractYearsRemaining === 'number' ? p.contractYearsRemaining : (1 + Math.floor(Math.random() * 5))) }
       })
       return {
         ...team,

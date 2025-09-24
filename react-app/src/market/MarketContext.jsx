@@ -282,6 +282,9 @@ export function MarketProvider({ children }) {
       const buyerName = s.teamName
       const myIdx = getMyTeamIndex(s)
       if (myIdx < 0) return s
+      // Block transfers under administration
+      const myTeam = s.teams[myIdx]
+      if (myTeam?.finances?.inAdministration) return s
       const { player } = findPlayerById(playerId, s)
       if (!player) return s
       const buyer = s.teams[myIdx]
@@ -327,6 +330,11 @@ export function MarketProvider({ children }) {
   function submitOfferForFreeAgent(playerId, wage, contractLength = 2) {
     setState((s) => {
       const buyerName = s.teamName
+      const myIdx = getMyTeamIndex(s)
+      if (myIdx < 0) return s
+      // Block free-agent signings under administration
+      const myTeam = s.teams[myIdx]
+      if (myTeam?.finances?.inAdministration) return s
       const player = (s.freeAgents || []).find(p => p.id === playerId)
       if (!player) return s
       const buyer = s.teams.find(t => t.name === buyerName)
@@ -714,6 +722,33 @@ export function MarketProvider({ children }) {
     saveNow()
   }
 
+  // Season-end: decrement contract years, release players with <=0 years into free agents
+  function processSeasonEndContracts() {
+    setState((s) => {
+      const weeks = GAME_CONSTANTS.FINANCE.WEEKS_PER_SEASON || 52
+      const isSeasonEnd = (s.league?.week % weeks) === 0
+      if (!isSeasonEnd) return s
+      let freeAgents = (s.freeAgents || []).slice()
+      const teams = (s.teams || []).map((team) => {
+        const players = (team.players || []).map(p => ({ ...p }))
+        const kept = []
+        for (const p of players) {
+          const years = typeof p.contractYearsRemaining === 'number' ? p.contractYearsRemaining : 1
+          const nextYears = years - 1
+          if (nextYears <= 0) {
+            // release to free agents
+            freeAgents.push({ ...p, starting: false })
+          } else {
+            kept.push({ ...p, contractYearsRemaining: nextYears })
+          }
+        }
+        return { ...team, players: kept }
+      })
+      return { ...s, teams, freeAgents }
+    })
+    saveNow()
+  }
+
   const api = useMemo(() => ({
     initMarketIfNeeded,
     generateFreeAgents,
@@ -722,6 +757,19 @@ export function MarketProvider({ children }) {
     findPlayerById,
   getOffersForPlayer,
   getOfferStatsForPlayer,
+    processSeasonEndContracts,
+    // Mutation helper: replace a team by name and persist
+    updateTeam: (updatedTeam) => {
+      if (!updatedTeam?.name) return
+      setState((s) => {
+        const idx = (s.teams || []).findIndex(t => t.name === updatedTeam.name)
+        if (idx < 0) return s
+        const teams = s.teams.slice()
+        teams[idx] = { ...teams[idx], ...updatedTeam }
+        return { ...s, teams }
+      })
+      saveNow()
+    },
     getPendingCommitments,
     canAffordWage,
     wageWarning,

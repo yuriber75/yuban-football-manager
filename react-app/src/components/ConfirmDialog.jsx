@@ -8,8 +8,8 @@ export default function ConfirmDialog({ open, title = 'Confirm', message, confir
         <h3 style={{ marginTop: 0 }}>{title}</h3>
         <div style={{ color: 'var(--muted)', marginBottom: 12 }}>{message}</div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button className="btn-secondary" onClick={onCancel}>{cancelText}</button>
-          <button onClick={onConfirm}>{confirmText}</button>
+          <button className="btn-danger" onClick={onCancel}>{cancelText}</button>
+          <button className="btn-confirm" onClick={onConfirm}>{confirmText}</button>
         </div>
       </div>
     </div>
